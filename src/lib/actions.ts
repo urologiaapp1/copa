@@ -27,11 +27,11 @@ export async function createEvent(formData: FormData) {
   if (!title) throw new Error("Falta el nombre del evento");
   if (names.length < 2) throw new Error("Agrega al menos 2 muestras");
 
-  const code = uniqueCode();
+  const code = await uniqueCode();
   const hostToken = generateToken();
   const eventId = generateToken();
 
-  store.insertEvent({
+  await store.insertEvent({
     id: eventId,
     code,
     title,
@@ -42,30 +42,32 @@ export async function createEvent(formData: FormData) {
     createdAt: new Date().toISOString(),
   });
 
-  names.forEach((line, i) => {
-    // formato opcional "Nombre | Productor | Cepa | Precio"
-    const [name, producer, grape, price] = line.split("|").map((s) => s?.trim());
-    store.insertItem({
-      id: generateToken(),
-      eventId,
-      position: i + 1,
-      name: name || `Muestra ${i + 1}`,
-      producer: producer || null,
-      grape: grape || null,
-      region: null,
-      price: price ? Number(price.replace(/[^\d]/g, "")) || null : null,
-      imageUrl: null,
-    });
-  });
+  await Promise.all(
+    names.map((line, i) => {
+      // formato opcional "Nombre | Productor | Cepa | Precio"
+      const [name, producer, grape, price] = line.split("|").map((s) => s?.trim());
+      return store.insertItem({
+        id: generateToken(),
+        eventId,
+        position: i + 1,
+        name: name || `Muestra ${i + 1}`,
+        producer: producer || null,
+        grape: grape || null,
+        region: null,
+        price: price ? Number(price.replace(/[^\d]/g, "")) || null : null,
+        imageUrl: null,
+      });
+    }),
+  );
 
   await setHostCookie(code, hostToken);
   redirect(`/host/${code}`);
 }
 
-function uniqueCode(): string {
+async function uniqueCode(): Promise<string> {
   for (let i = 0; i < 20; i++) {
     const c = generateCode();
-    if (!store.getEventByCode(c)) return c;
+    if (!(await store.getEventByCode(c))) return c;
   }
   return generateCode();
 }
@@ -75,7 +77,7 @@ export async function joinEvent(formData: FormData) {
   const code = String(formData.get("code") ?? "").toUpperCase().trim();
   const name = String(formData.get("name") ?? "").trim();
 
-  const event = store.getEventByCode(code);
+  const event = await store.getEventByCode(code);
   if (!event) throw new Error("Evento no encontrado");
   if (event.status === "closed" || event.status === "revealed")
     throw new Error("Este evento ya finalizó");
@@ -85,16 +87,16 @@ export async function joinEvent(formData: FormData) {
   // reconectar si ya hay sesión válida
   const existing = await getParticipantSession(code);
   if (existing) {
-    const p = store.getParticipant(existing.participantId);
+    const p = await store.getParticipant(existing.participantId);
     if (p && p.token === existing.token) redirect(`/play/${code}`);
   }
 
-  if (store.nameTaken(event.id, name))
+  if (await store.nameTaken(event.id, name))
     throw new Error("Ese nombre ya está en uso en este evento");
 
   const participantId = generateToken();
   const token = generateToken();
-  store.insertParticipant({
+  await store.insertParticipant({
     id: participantId,
     eventId: event.id,
     name,
@@ -122,20 +124,20 @@ export interface EvalInput {
 }
 
 export async function saveEvaluation(code: string, input: EvalInput) {
-  const event = store.getEventByCode(code);
+  const event = await store.getEventByCode(code);
   if (!event) return { ok: false, error: "Evento no encontrado" };
 
   const session = await getParticipantSession(code);
   if (!session) return { ok: false, error: "Sesión no válida" };
-  const p = store.getParticipant(session.participantId);
+  const p = await store.getParticipant(session.participantId);
   if (!p || p.token !== session.token || p.eventId !== event.id)
     return { ok: false, error: "Sesión no válida" };
 
-  const item = store.getItemsForEvent(event.id).find((i) => i.id === input.itemId);
+  const item = (await store.getItemsForEvent(event.id)).find((i) => i.id === input.itemId);
   if (!item) return { ok: false, error: "Muestra no encontrada" };
 
-  const existing = store.getEvaluation(input.itemId, p.id);
-  store.upsertEvaluation({
+  const existing = await store.getEvaluation(input.itemId, p.id);
+  await store.upsertEvaluation({
     id: existing?.id ?? generateToken(),
     eventId: event.id,
     itemId: input.itemId,
@@ -157,7 +159,7 @@ export async function saveEvaluation(code: string, input: EvalInput) {
 
 // ---------- Anfitrión: controles ----------
 async function requireHost(code: string) {
-  const event = store.getEventByCode(code);
+  const event = await store.getEventByCode(code);
   if (!event) throw new Error("Evento no encontrado");
   const token = await getHostToken(code);
   if (token !== event.hostToken) throw new Error("No autorizado");
@@ -166,14 +168,14 @@ async function requireHost(code: string) {
 
 export async function hostSetStatus(code: string, status: EventStatus) {
   const event = await requireHost(code);
-  store.updateEvent(event.id, { status });
+  await store.updateEvent(event.id, { status });
   revalidatePath(`/host/${code}`);
 }
 
 export async function hostSetIndex(code: string, index: number) {
   const event = await requireHost(code);
-  const count = store.getItemsForEvent(event.id).length;
-  store.updateEvent(event.id, {
+  const count = (await store.getItemsForEvent(event.id)).length;
+  await store.updateEvent(event.id, {
     status: "tasting",
     currentIndex: clamp(index, 0, Math.max(0, count - 1)),
   });

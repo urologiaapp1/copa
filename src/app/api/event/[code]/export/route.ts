@@ -13,20 +13,20 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
-  const event = store.getEventByCode(code);
+  const event = await store.getEventByCode(code);
   if (!event) return new Response("not_found", { status: 404 });
   if ((await getHostToken(code)) !== event.hostToken)
     return new Response("unauthorized", { status: 403 });
 
   const format = new URL(req.url).searchParams.get("format") ?? "summary";
-  const items = store.getItemsForEvent(event.id);
-  const participants = store.getParticipantsForEvent(event.id);
+  const items = await store.getItemsForEvent(event.id);
+  const participants = await store.getParticipantsForEvent(event.id);
 
   let csv: string;
   let filename: string;
 
   if (format === "raw") {
-    const evals = store.getEvaluationsForEvent(event.id);
+    const evals = await store.getEvaluationsForEvent(event.id);
     const rows = evals.map((e) => {
       const item = items.find((i) => i.id === e.itemId);
       const p = participants.find((x) => x.id === e.participantId);
@@ -52,7 +52,7 @@ export async function GET(
     );
     filename = `copa-ciega-${event.code}-evaluaciones.csv`;
   } else {
-    const results = computeResults(event.id);
+    const results = await computeResults(event.id);
     const rows = results.ranking.map((s, i) => [
       i + 1,
       s.item.position,

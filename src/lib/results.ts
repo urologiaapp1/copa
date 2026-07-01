@@ -32,10 +32,12 @@ function std(xs: number[]): number {
   return Math.sqrt(mean(xs.map((x) => (x - m) ** 2)));
 }
 
-export function computeResults(eventId: string): EventResults {
-  const items = store.getItemsForEvent(eventId);
-  const evals = store.getEvaluationsForEvent(eventId);
-  const participants = store.getParticipantsForEvent(eventId);
+export async function computeResults(eventId: string): Promise<EventResults> {
+  const [items, evals, participants] = await Promise.all([
+    store.getItemsForEvent(eventId),
+    store.getEvaluationsForEvent(eventId),
+    store.getParticipantsForEvent(eventId),
+  ]);
 
   const stats: ItemStat[] = items.map((item) => {
     const es = evals.filter((e) => e.itemId === item.id);
@@ -104,15 +106,17 @@ export interface TasterProfile {
   radar: { aroma: number; flavor: number; balance: number };
 }
 
-export function computeTasterProfile(
+export async function computeTasterProfile(
   eventId: string,
   participantId: string,
-): TasterProfile | null {
-  const p = store.getParticipant(participantId);
+): Promise<TasterProfile | null> {
+  const p = await store.getParticipant(participantId);
   if (!p) return null;
-  const items = store.getItemsForEvent(eventId);
-  const mine = store.getEvaluationsForParticipant(eventId, participantId);
-  const all = store.getEvaluationsForEvent(eventId);
+  const [items, mine, all] = await Promise.all([
+    store.getItemsForEvent(eventId),
+    store.getEvaluationsForParticipant(eventId, participantId),
+    store.getEvaluationsForEvent(eventId),
+  ]);
 
   const avgGiven = mean(mine.map((e) => e.overall));
   const groupAvg = mean(all.map((e) => e.overall));

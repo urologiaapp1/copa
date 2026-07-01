@@ -35,10 +35,12 @@ create table if not exists participants (
   event_id uuid not null references events(id) on delete cascade,
   name text not null,
   token text not null,               -- secreto por participante
-  created_at timestamptz not null default now(),
-  unique (event_id, lower(name))
+  created_at timestamptz not null default now()
 );
 create index if not exists participants_event_idx on participants(event_id);
+-- nombre único por evento (case-insensitive); expresión => índice aparte
+create unique index if not exists participants_event_name_idx
+  on participants (event_id, lower(name));
 
 create table if not exists evaluations (
   id uuid primary key default gen_random_uuid(),

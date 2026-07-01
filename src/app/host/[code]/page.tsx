@@ -12,7 +12,7 @@ export default async function HostPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  const event = store.getEventByCode(code);
+  const event = await store.getEventByCode(code);
   if (!event) notFound();
 
   const token = await getHostToken(code);

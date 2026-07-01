@@ -3,13 +3,12 @@ import type {
   Participant,
   TastingEvent,
   TastingItem,
-} from "./types";
+} from "../types";
 
 /**
- * Almacenamiento en memoria para desarrollo. Persiste dentro del proceso de
- * Node (sobrevive a HMR gracias al guard en globalThis). Cuando existan
- * credenciales de Supabase, este módulo se puede reemplazar por un adaptador
- * con la misma API (ver schema.sql).
+ * Backend en memoria para desarrollo sin base de datos. Persiste dentro del
+ * proceso de Node (sobrevive a HMR gracias al guard en globalThis). Cumple la
+ * misma API asíncrona que el backend de Supabase.
  */
 interface DB {
   events: Map<string, TastingEvent>;
@@ -30,55 +29,53 @@ const db: DB =
   });
 
 // ---- Events ----
-export function insertEvent(e: TastingEvent) {
+export async function insertEvent(e: TastingEvent) {
   db.events.set(e.id, e);
 }
-export function getEventByCode(code: string): TastingEvent | undefined {
+export async function getEventByCode(code: string): Promise<TastingEvent | undefined> {
   const up = code.toUpperCase();
   for (const e of db.events.values()) if (e.code === up) return e;
   return undefined;
 }
-export function getEventById(id: string): TastingEvent | undefined {
+export async function getEventById(id: string): Promise<TastingEvent | undefined> {
   return db.events.get(id);
 }
-export function updateEvent(id: string, patch: Partial<TastingEvent>) {
+export async function updateEvent(id: string, patch: Partial<TastingEvent>) {
   const e = db.events.get(id);
   if (!e) return;
   db.events.set(id, { ...e, ...patch });
 }
 
 // ---- Items ----
-export function insertItem(it: TastingItem) {
+export async function insertItem(it: TastingItem) {
   db.items.set(it.id, it);
 }
-export function getItemsForEvent(eventId: string): TastingItem[] {
+export async function getItemsForEvent(eventId: string): Promise<TastingItem[]> {
   return [...db.items.values()]
     .filter((i) => i.eventId === eventId)
     .sort((a, b) => a.position - b.position);
 }
 
 // ---- Participants ----
-export function insertParticipant(p: Participant) {
+export async function insertParticipant(p: Participant) {
   db.participants.set(p.id, p);
 }
-export function getParticipant(id: string): Participant | undefined {
+export async function getParticipant(id: string): Promise<Participant | undefined> {
   return db.participants.get(id);
 }
-export function getParticipantsForEvent(eventId: string): Participant[] {
+export async function getParticipantsForEvent(eventId: string): Promise<Participant[]> {
   return [...db.participants.values()]
     .filter((p) => p.eventId === eventId)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
-export function nameTaken(eventId: string, name: string): boolean {
+export async function nameTaken(eventId: string, name: string): Promise<boolean> {
   const n = name.trim().toLowerCase();
-  return getParticipantsForEvent(eventId).some(
-    (p) => p.name.trim().toLowerCase() === n,
-  );
+  const list = await getParticipantsForEvent(eventId);
+  return list.some((p) => p.name.trim().toLowerCase() === n);
 }
 
 // ---- Evaluations ----
-export function upsertEvaluation(ev: Evaluation) {
-  // clave lógica: (itemId, participantId)
+export async function upsertEvaluation(ev: Evaluation) {
   const existing = [...db.evaluations.values()].find(
     (e) => e.itemId === ev.itemId && e.participantId === ev.participantId,
   );
@@ -88,21 +85,21 @@ export function upsertEvaluation(ev: Evaluation) {
     db.evaluations.set(ev.id, ev);
   }
 }
-export function getEvaluation(
+export async function getEvaluation(
   itemId: string,
   participantId: string,
-): Evaluation | undefined {
+): Promise<Evaluation | undefined> {
   return [...db.evaluations.values()].find(
     (e) => e.itemId === itemId && e.participantId === participantId,
   );
 }
-export function getEvaluationsForEvent(eventId: string): Evaluation[] {
+export async function getEvaluationsForEvent(eventId: string): Promise<Evaluation[]> {
   return [...db.evaluations.values()].filter((e) => e.eventId === eventId);
 }
-export function getEvaluationsForParticipant(
+export async function getEvaluationsForParticipant(
   eventId: string,
   participantId: string,
-): Evaluation[] {
+): Promise<Evaluation[]> {
   return [...db.evaluations.values()].filter(
     (e) => e.eventId === eventId && e.participantId === participantId,
   );

@@ -11,7 +11,7 @@ export default async function TVPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  const event = store.getEventByCode(code);
+  const event = await store.getEventByCode(code);
   if (!event) notFound();
 
   const h = await headers();

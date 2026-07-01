@@ -8,13 +8,13 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
-  const event = store.getEventByCode(code);
+  const event = await store.getEventByCode(code);
   if (!event) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const items = store.getItemsForEvent(event.id);
+  const items = await store.getItemsForEvent(event.id);
   const current = items[event.currentIndex];
   const responsesForCurrent = current
-    ? store.getEvaluationsForEvent(event.id).filter((e) => e.itemId === current.id).length
+    ? (await store.getEvaluationsForEvent(event.id)).filter((e) => e.itemId === current.id).length
     : 0;
 
   // ¿Este visitante ya está inscrito?
@@ -23,12 +23,12 @@ export async function GET(
   let myCurrentEval = null;
   let myEvaluatedCount = 0;
   if (session) {
-    const p = store.getParticipant(session.participantId);
+    const p = await store.getParticipant(session.participantId);
     if (p && p.token === session.token) {
       me = { id: p.id, name: p.name };
-      myEvaluatedCount = store.getEvaluationsForParticipant(event.id, p.id).length;
+      myEvaluatedCount = (await store.getEvaluationsForParticipant(event.id, p.id)).length;
       if (current) {
-        const ev = store.getEvaluation(current.id, p.id);
+        const ev = await store.getEvaluation(current.id, p.id);
         if (ev) {
           const { id: _id, eventId: _e, participantId: _p, updatedAt: _u, ...rest } = ev;
           void _id; void _e; void _p; void _u;
@@ -50,7 +50,7 @@ export async function GET(
     currentItemId: current?.id ?? null,
     currentItemPosition: current?.position ?? null,
     responsesForCurrent,
-    participants: store.getParticipantsForEvent(event.id).map((p) => ({ name: p.name })),
+    participants: (await store.getParticipantsForEvent(event.id)).map((p) => ({ name: p.name })),
     me,
     myCurrentEval,
     myEvaluatedCount,

@@ -13,6 +13,6 @@ export default async function ResultsPage({
 }) {
   const { code } = await params;
   const { print } = await searchParams;
-  if (!store.getEventByCode(code)) notFound();
+  if (!(await store.getEventByCode(code))) notFound();
   return <ResultsView code={code.toUpperCase()} print={print === "1"} />;
 }

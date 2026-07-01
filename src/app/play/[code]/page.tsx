@@ -9,12 +9,12 @@ export default async function PlayPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  const event = store.getEventByCode(code);
+  const event = await store.getEventByCode(code);
   if (!event) notFound();
 
   const session = await getParticipantSession(code);
   if (!session) redirect(`/join/${code}`);
-  const p = store.getParticipant(session!.participantId);
+  const p = await store.getParticipant(session!.participantId);
   if (!p || p.token !== session!.token || p.eventId !== event.id)
     redirect(`/join/${code}`);
 

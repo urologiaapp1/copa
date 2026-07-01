@@ -9,21 +9,21 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
-  const event = store.getEventByCode(code);
+  const event = await store.getEventByCode(code);
   if (!event) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const isHost = (await getHostToken(code)) === event.hostToken;
   if (event.status !== "revealed" && !isHost)
     return NextResponse.json({ error: "not_revealed" }, { status: 403 });
 
-  const results = computeResults(event.id);
+  const results = await computeResults(event.id);
 
   let profile = null;
   const session = await getParticipantSession(code);
   if (session) {
-    const p = store.getParticipant(session.participantId);
+    const p = await store.getParticipant(session.participantId);
     if (p && p.token === session.token)
-      profile = computeTasterProfile(event.id, p.id);
+      profile = await computeTasterProfile(event.id, p.id);
   }
 
   return NextResponse.json({

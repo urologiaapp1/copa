@@ -9,16 +9,18 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
-  const event = store.getEventByCode(code);
+  const event = await store.getEventByCode(code);
   if (!event) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const token = await getHostToken(code);
   if (token !== event.hostToken)
     return NextResponse.json({ error: "unauthorized" }, { status: 403 });
 
-  const items = store.getItemsForEvent(event.id);
-  const participants = store.getParticipantsForEvent(event.id);
-  const evals = store.getEvaluationsForEvent(event.id);
+  const [items, participants, evals] = await Promise.all([
+    store.getItemsForEvent(event.id),
+    store.getParticipantsForEvent(event.id),
+    store.getEvaluationsForEvent(event.id),
+  ]);
 
   const perItemResponses = items.map((it) => ({
     itemId: it.id,
@@ -46,6 +48,6 @@ export async function GET(
     })),
     participants: participants.map((p) => ({ id: p.id, name: p.name })),
     perItemResponses,
-    results: computeResults(event.id),
+    results: await computeResults(event.id),
   });
 }
