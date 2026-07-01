@@ -47,3 +47,33 @@ export const MODALITIES: Modality[] = [
 export function getModality(key: string): Modality {
   return MODALITIES.find((m) => m.key === key) ?? MODALITIES[0];
 }
+
+/** Cepas tintas más frecuentes en Chile (para elegir en catas de tinto). */
+export const CHILEAN_RED_GRAPES = [
+  "Cabernet Sauvignon",
+  "Merlot",
+  "Carménère",
+  "Syrah",
+  "Malbec",
+  "Cabernet Franc",
+  "Pinot Noir",
+  "Petit Verdot",
+  "Carignan (Cariñena)",
+  "País",
+  "Petite Sirah",
+  "Tempranillo",
+  "Sangiovese",
+  "Garnacha (Grenache)",
+  "Mourvèdre",
+  "Cinsault",
+  "Otra / Mezcla",
+];
+
+/**
+ * Opciones sugeridas para el campo de estimación de cepa/origen.
+ * Devuelve una lista para elegir, o null si es texto libre.
+ */
+export function guessOptions(modalityKey: string): string[] | null {
+  if (modalityKey === "tinto") return CHILEAN_RED_GRAPES;
+  return null;
+}

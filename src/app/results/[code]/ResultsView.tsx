@@ -149,6 +149,44 @@ function ProfileCard({ profile }: { profile: TasterProfile }) {
         <RadarBar label="Sabor" value={profile.radar.flavor} />
         <RadarBar label="Equilibrio" value={profile.radar.balance} />
       </div>
+
+      {profile.grapeGuesses > 0 && (
+        <p className="mt-4 rounded-lg bg-burdeo/10 px-3 py-2 text-center text-sm font-medium text-burdeo">
+          🎯 Acertaste {profile.grapeHits} de {profile.grapeGuesses} cepas
+        </p>
+      )}
+
+      {profile.report.some((r) => r.myGuess || r.myPrice != null) && (
+        <div className="mt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+            Tu informe de aciertos
+          </p>
+          <div className="space-y-1.5">
+            {profile.report.map((r) => (
+              <div
+                key={r.position}
+                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs"
+              >
+                <span className="min-w-0 flex-1 truncate text-negro">
+                  <b>{r.name}</b>
+                </span>
+                <span className="text-muted">
+                  {r.myGuess ? (
+                    <>
+                      dijiste <b className="text-negro">{r.myGuess}</b>
+                      {r.realGrape ? ` · era ${r.realGrape}` : ""}
+                    </>
+                  ) : (
+                    "sin apuesta de cepa"
+                  )}
+                </span>
+                {r.grapeHit === true && <span className="text-green-700">✓</span>}
+                {r.grapeHit === false && <span className="text-red-500">✗</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

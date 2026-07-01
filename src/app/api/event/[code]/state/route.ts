@@ -22,19 +22,24 @@ export async function GET(
   let me: { id: string; name: string } | null = null;
   let myCurrentEval = null;
   let myEvaluatedCount = 0;
+  // mapa itemId -> datos de MI evaluación (para ritmo libre: editar cualquiera)
+  const myEvalsById: Record<string, unknown> = {};
+  let stillHere = true;
   if (session) {
     const p = await store.getParticipant(session.participantId);
     if (p && p.token === session.token) {
       me = { id: p.id, name: p.name };
-      myEvaluatedCount = (await store.getEvaluationsForParticipant(event.id, p.id)).length;
-      if (current) {
-        const ev = await store.getEvaluation(current.id, p.id);
-        if (ev) {
-          const { id: _id, eventId: _e, participantId: _p, updatedAt: _u, ...rest } = ev;
-          void _id; void _e; void _p; void _u;
-          myCurrentEval = rest;
-        }
+      const mine = await store.getEvaluationsForParticipant(event.id, p.id);
+      myEvaluatedCount = mine.length;
+      for (const ev of mine) {
+        const { id: _id, eventId: _e, participantId: _p, updatedAt: _u, ...rest } = ev;
+        void _id; void _e; void _p; void _u;
+        myEvalsById[ev.itemId] = rest;
       }
+      if (current) myCurrentEval = myEvalsById[current.id] ?? null;
+    } else {
+      // sesión existe pero el catador fue eliminado por el anfitrión
+      stillHere = false;
     }
   }
 
@@ -46,13 +51,19 @@ export async function GET(
       status: event.status,
       currentIndex: event.currentIndex,
       itemCount: items.length,
+      doubleBlind: event.doubleBlind,
+      freePace: event.freePace,
     },
+    // en ciego/doble ciego los nombres van ocultos: solo posición e id
+    items: items.map((i) => ({ id: i.id, position: i.position })),
     currentItemId: current?.id ?? null,
     currentItemPosition: current?.position ?? null,
     responsesForCurrent,
     participants: (await store.getParticipantsForEvent(event.id)).map((p) => ({ name: p.name })),
     me,
+    stillHere,
     myCurrentEval,
+    myEvalsById,
     myEvaluatedCount,
   });
 }

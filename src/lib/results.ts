@@ -95,6 +95,16 @@ export async function computeResults(eventId: string): Promise<EventResults> {
   };
 }
 
+export interface WineReportRow {
+  position: number;
+  name: string; // nombre revelado
+  myGuess: string | null; // cepa/estimación que apostó
+  realGrape: string | null;
+  grapeHit: boolean | null; // null = sin cepa real o sin apuesta
+  myPrice: number | null;
+  realPrice: number | null;
+}
+
 export interface TasterProfile {
   participantId: string;
   name: string;
@@ -103,7 +113,9 @@ export interface TasterProfile {
   generosityVsGroup: number; // + = puntúa más alto que el grupo
   priceAccuracy: number | null; // 0-100, precisión de precio estimado
   grapeHits: number; // aciertos de cepa/estimación (texto contiene)
+  grapeGuesses: number; // cuántas veces intentó adivinar la cepa (con cepa real)
   radar: { aroma: number; flavor: number; balance: number };
+  report: WineReportRow[]; // detalle por vino (informe de aciertos)
 }
 
 export async function computeTasterProfile(
@@ -121,21 +133,35 @@ export async function computeTasterProfile(
   const avgGiven = mean(mine.map((e) => e.overall));
   const groupAvg = mean(all.map((e) => e.overall));
 
-  // precisión de precio
+  // precisión de precio + aciertos de cepa + detalle por vino
   const priceErrors: number[] = [];
   let grapeHits = 0;
-  for (const e of mine) {
-    const item = items.find((i) => i.id === e.itemId);
-    if (!item) continue;
+  let grapeGuesses = 0;
+  const report: WineReportRow[] = [];
+  for (const item of items) {
+    const e = mine.find((x) => x.itemId === item.id);
+    if (!e) continue;
     if (item.price && e.estimatedPrice) {
       const err = Math.abs(item.price - e.estimatedPrice) / item.price;
       priceErrors.push(Math.min(1, err));
     }
+    let grapeHit: boolean | null = null;
     if (item.grape && e.estimatedGrape) {
+      grapeGuesses++;
       const g = e.estimatedGrape.toLowerCase();
       const real = item.grape.toLowerCase();
-      if (real.includes(g) || g.includes(real)) grapeHits++;
+      grapeHit = real.includes(g) || g.includes(real);
+      if (grapeHit) grapeHits++;
     }
+    report.push({
+      position: item.position,
+      name: item.name,
+      myGuess: e.estimatedGrape || null,
+      realGrape: item.grape,
+      grapeHit,
+      myPrice: e.estimatedPrice,
+      realPrice: item.price,
+    });
   }
   const priceAccuracy = priceErrors.length
     ? Math.round((1 - mean(priceErrors)) * 100)
@@ -149,10 +175,12 @@ export async function computeTasterProfile(
     generosityVsGroup: avgGiven - groupAvg,
     priceAccuracy,
     grapeHits,
+    grapeGuesses,
     radar: {
       aroma: mean(mine.map((e) => e.aroma)),
       flavor: mean(mine.map((e) => e.flavor)),
       balance: mean(mine.map((e) => e.balance)),
     },
+    report,
   };
 }

@@ -55,6 +55,14 @@ export async function getItemsForEvent(eventId: string): Promise<TastingItem[]> 
     .filter((i) => i.eventId === eventId)
     .sort((a, b) => a.position - b.position);
 }
+export async function updateItem(
+  id: string,
+  patch: Partial<Pick<TastingItem, "name" | "producer" | "grape" | "region" | "price" | "imageUrl">>,
+) {
+  const it = db.items.get(id);
+  if (!it) return;
+  db.items.set(id, { ...it, ...patch });
+}
 
 // ---- Participants ----
 export async function insertParticipant(p: Participant) {
@@ -62,6 +70,11 @@ export async function insertParticipant(p: Participant) {
 }
 export async function getParticipant(id: string): Promise<Participant | undefined> {
   return db.participants.get(id);
+}
+export async function removeParticipant(id: string) {
+  db.participants.delete(id);
+  for (const [k, e] of db.evaluations)
+    if (e.participantId === id) db.evaluations.delete(k);
 }
 export async function getParticipantsForEvent(eventId: string): Promise<Participant[]> {
   return [...db.participants.values()]

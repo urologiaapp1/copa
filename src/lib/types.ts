@@ -6,8 +6,11 @@ export interface TastingEvent {
   title: string;
   modality: string; // key from MODALITIES
   status: EventStatus;
-  currentIndex: number; // active item during tasting
+  currentIndex: number; // active item during tasting (modo guiado)
   hostToken: string; // secret, never sent to participants
+  doubleBlind: boolean; // vinos solo numerados; info se agrega al final
+  freePace: boolean; // catadores evalúan/editan cualquier vino cuando quieran
+  recoveryCode: string; // código SOS para recuperar admin en otro dispositivo
   createdAt: string;
 }
 
@@ -58,4 +61,6 @@ export interface PublicEvent {
   status: EventStatus;
   currentIndex: number;
   itemCount: number;
+  doubleBlind: boolean;
+  freePace: boolean;
 }

@@ -6,12 +6,20 @@ import { QRShare } from "@/components/QRShare";
 import { Confetti } from "@/components/Confetti";
 import { Button, Card, Badge } from "@/components/ui";
 import { usePolling } from "@/lib/usePolling";
-import { hostSetIndex, hostSetStatus } from "@/lib/actions";
-import { getModality } from "@/lib/modalities";
+import { hostRemoveParticipant, hostSetIndex, hostSetStatus, hostUpdateItem } from "@/lib/actions";
+import { getModality, CHILEAN_RED_GRAPES } from "@/lib/modalities";
 import { formatCLP } from "@/lib/utils";
 import type { EventResults } from "@/lib/results";
 import type { EventStatus } from "@/lib/types";
 
+interface HostItem {
+  id: string;
+  position: number;
+  name: string;
+  producer: string | null;
+  grape: string | null;
+  price: number | null;
+}
 interface HostData {
   event: {
     code: string;
@@ -20,8 +28,11 @@ interface HostData {
     status: EventStatus;
     currentIndex: number;
     itemCount: number;
+    doubleBlind: boolean;
+    freePace: boolean;
+    recoveryCode: string;
   };
-  items: { id: string; position: number; name: string; producer: string | null; grape: string | null; price: number | null }[];
+  items: HostItem[];
   participants: { id: string; name: string }[];
   perItemResponses: { itemId: string; position: number; name: string; responses: number }[];
   results: EventResults;
@@ -45,6 +56,13 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
     } finally {
       setBusy(false);
     }
+  }
+
+  async function removeParticipant(id: string, name: string) {
+    if (!confirm(`¿Eliminar a ${name} de la cata?`)) return;
+    await run(async () => {
+      await hostRemoveParticipant(code, id);
+    });
   }
 
   return (
@@ -81,7 +99,11 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
               <QRShare url={joinUrl} code={event.code} />
             </Card>
 
-            <ParticipantsCard participants={participants} />
+            <SosCard recoveryCode={event.recoveryCode} />
+
+            <ModeBadges doubleBlind={event.doubleBlind} freePace={event.freePace} />
+
+            <ParticipantsCard participants={participants} onRemove={removeParticipant} busy={busy} />
 
             <Button
               variant="gold"
@@ -98,41 +120,57 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
         {/* TASTING */}
         {event.status === "tasting" && (
           <div className="space-y-5">
-            <Card className="p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted">Muestra activa</p>
-                <Badge>
-                  {event.currentIndex + 1} / {event.itemCount}
-                </Badge>
-              </div>
-              <p className="mt-1 text-3xl font-bold text-burdeo">
-                Muestra {event.currentIndex + 1}
-              </p>
-              <p className="mt-1 text-xs text-muted">
-                Los participantes puntúan sin ver el nombre real.
-              </p>
+            {event.freePace ? (
+              <Card className="p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-negro">Ritmo libre</p>
+                  <Badge>{event.itemCount} vinos abiertos</Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted">
+                  Cada catador evalúa y edita los vinos que quiera, en cualquier orden. Cierra la
+                  votación cuando estén listos.
+                </p>
+              </Card>
+            ) : (
+              <Card className="p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted">Muestra activa</p>
+                  <Badge>
+                    {event.currentIndex + 1} / {event.itemCount}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-3xl font-bold text-burdeo">
+                  Muestra {event.currentIndex + 1}
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  Los participantes puntúan sin ver el nombre real.
+                </p>
+                <div className="mt-4 flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    disabled={busy || event.currentIndex === 0}
+                    onClick={() => run(() => hostSetIndex(code, event.currentIndex - 1))}
+                  >
+                    ← Anterior
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1"
+                    disabled={busy || event.currentIndex >= event.itemCount - 1}
+                    onClick={() => run(() => hostSetIndex(code, event.currentIndex + 1))}
+                  >
+                    Siguiente muestra →
+                  </Button>
+                </div>
+              </Card>
+            )}
 
-              <div className="mt-4 flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  disabled={busy || event.currentIndex === 0}
-                  onClick={() => run(() => hostSetIndex(code, event.currentIndex - 1))}
-                >
-                  ← Anterior
-                </Button>
-                <Button
-                  variant="primary"
-                  className="flex-1"
-                  disabled={busy || event.currentIndex >= event.itemCount - 1}
-                  onClick={() => run(() => hostSetIndex(code, event.currentIndex + 1))}
-                >
-                  Siguiente muestra →
-                </Button>
-              </div>
-            </Card>
+            {event.doubleBlind && (
+              <ItemEditor code={code} items={data.items} modalityKey={event.modality} />
+            )}
 
             <Card className="p-5">
-              <p className="mb-3 text-sm font-semibold text-negro">Respuestas por muestra</p>
+              <p className="mb-3 text-sm font-semibold text-negro">Respuestas por vino</p>
               <div className="space-y-2">
                 {perItemResponses.map((r) => (
                   <div key={r.itemId} className="flex items-center gap-3">
@@ -153,7 +191,7 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
               </div>
             </Card>
 
-            <ParticipantsCard participants={participants} />
+            <ParticipantsCard participants={participants} onRemove={removeParticipant} busy={busy} canJoin />
 
             <Button
               variant="gold"
@@ -177,7 +215,9 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
                 {results.totalEvaluations} evaluaciones
               </p>
               <p className="mt-4 text-sm text-muted">
-                Cuando estén todos listos, revela los resultados.
+                {event.doubleBlind
+                  ? "Completa la info de cada vino y luego revela para enviar los informes de aciertos."
+                  : "Cuando estén todos listos, revela los resultados."}
               </p>
               <Button
                 variant="gold"
@@ -198,6 +238,10 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
                 Reabrir votación
               </Button>
             </Card>
+
+            {event.doubleBlind && (
+              <ItemEditor code={code} items={data.items} modalityKey={event.modality} />
+            )}
           </div>
         )}
 
@@ -257,12 +301,27 @@ function StatusPill({ status }: { status: EventStatus }) {
   );
 }
 
-function ParticipantsCard({ participants }: { participants: { id: string; name: string }[] }) {
+function ParticipantsCard({
+  participants,
+  onRemove,
+  busy,
+  canJoin,
+}: {
+  participants: { id: string; name: string }[];
+  onRemove?: (id: string, name: string) => void;
+  busy?: boolean;
+  canJoin?: boolean;
+}) {
   return (
     <Card className="p-5">
-      <p className="mb-3 text-sm font-semibold text-negro">
-        Participantes <span className="text-muted">({participants.length})</span>
+      <p className="mb-1 text-sm font-semibold text-negro">
+        Catadores <span className="text-muted">({participants.length})</span>
       </p>
+      {canJoin && (
+        <p className="mb-3 text-xs text-muted">
+          Los que lleguen tarde pueden unirse escaneando el QR mientras la cata siga abierta.
+        </p>
+      )}
       {participants.length === 0 ? (
         <p className="text-sm text-muted">Aún no se une nadie. Comparte el QR.</p>
       ) : (
@@ -270,14 +329,139 @@ function ParticipantsCard({ participants }: { participants: { id: string; name: 
           {participants.map((p) => (
             <span
               key={p.id}
-              className="animate-pop rounded-full bg-burdeo/10 px-3 py-1 text-sm font-medium text-burdeo"
+              className="animate-pop inline-flex items-center gap-1.5 rounded-full bg-burdeo/10 py-1 pl-3 pr-1 text-sm font-medium text-burdeo"
             >
               {p.name}
+              {onRemove && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onRemove(p.id, p.name)}
+                  aria-label={`Eliminar ${p.name}`}
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-burdeo/60 hover:bg-burdeo hover:text-marfil disabled:opacity-40"
+                >
+                  ×
+                </button>
+              )}
             </span>
           ))}
         </div>
       )}
     </Card>
+  );
+}
+
+function SosCard({ recoveryCode }: { recoveryCode: string }) {
+  return (
+    <Card className="border-dorado/40 bg-dorado/10 p-5">
+      <p className="text-sm font-semibold text-burdeo">🆘 Tu código SOS de administrador</p>
+      <p className="mt-1 text-xs text-negro/70">
+        Guárdalo. Si pierdes el acceso (cambias de teléfono o se borra tu sesión), entra a{" "}
+        <b>/recover</b> con el código del evento y este código para retomar el control.
+      </p>
+      <p className="mt-3 select-all rounded-lg bg-white px-4 py-2 text-center font-mono text-2xl font-bold tracking-[0.25em] text-burdeo">
+        {recoveryCode || "—"}
+      </p>
+    </Card>
+  );
+}
+
+function ModeBadges({ doubleBlind, freePace }: { doubleBlind: boolean; freePace: boolean }) {
+  if (!doubleBlind && !freePace) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {doubleBlind && <Badge>👁️ Doble ciego</Badge>}
+      {freePace && <Badge>🎯 Ritmo libre</Badge>}
+    </div>
+  );
+}
+
+function ItemEditor({
+  code,
+  items,
+  modalityKey,
+}: {
+  code: string;
+  items: HostItem[];
+  modalityKey: string;
+}) {
+  return (
+    <Card className="p-5">
+      <p className="mb-1 text-sm font-semibold text-negro">Info de los vinos</p>
+      <p className="mb-3 text-xs text-muted">
+        Agrega o corrige la información de cada vino. Se revela junto con los resultados.
+      </p>
+      <div className="space-y-3">
+        {items.map((it) => (
+          <ItemRow key={it.id} code={code} item={it} modalityKey={modalityKey} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function ItemRow({
+  code,
+  item,
+  modalityKey,
+}: {
+  code: string;
+  item: HostItem;
+  modalityKey: string;
+}) {
+  const [name, setName] = useState(item.name);
+  const [producer, setProducer] = useState(item.producer ?? "");
+  const [grape, setGrape] = useState(item.grape ?? "");
+  const [price, setPrice] = useState<string>(item.price != null ? String(item.price) : "");
+  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
+  const isTinto = modalityKey === "tinto";
+
+  async function save() {
+    setState("saving");
+    await hostUpdateItem(code, item.id, {
+      name,
+      producer,
+      grape,
+      price: price === "" ? null : Number(price),
+    });
+    setState("saved");
+    setTimeout(() => setState("idle"), 1500);
+  }
+
+  const input =
+    "rounded-lg border border-[var(--border)] bg-white px-2.5 py-1.5 text-sm text-negro outline-none focus:border-dorado";
+
+  return (
+    <div className="rounded-xl border border-[var(--border)] p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs font-semibold text-burdeo">Vino {item.position}</span>
+        <button
+          type="button"
+          onClick={save}
+          disabled={state === "saving"}
+          className="rounded-full bg-burdeo px-3 py-1 text-xs font-medium text-marfil disabled:opacity-50"
+        >
+          {state === "saving" ? "Guardando…" : state === "saved" ? "Guardado ✓" : "Guardar"}
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <input className={input + " col-span-2"} placeholder="Nombre del vino" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className={input} placeholder="Productor / viña" value={producer} onChange={(e) => setProducer(e.target.value)} />
+        {isTinto ? (
+          <select className={input} value={grape} onChange={(e) => setGrape(e.target.value)}>
+            <option value="">Cepa…</option>
+            {CHILEAN_RED_GRAPES.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input className={input} placeholder="Cepa / tipo" value={grape} onChange={(e) => setGrape(e.target.value)} />
+        )}
+        <input className={input + " col-span-2"} type="number" inputMode="numeric" placeholder="Precio (CLP)" value={price} onChange={(e) => setPrice(e.target.value)} />
+      </div>
+    </div>
   );
 }
 

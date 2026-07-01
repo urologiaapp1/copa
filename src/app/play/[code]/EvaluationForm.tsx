@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { saveEvaluation, type EvalInput } from "@/lib/actions";
-import { getModality } from "@/lib/modalities";
+import { getModality, guessOptions } from "@/lib/modalities";
 import { Card } from "@/components/ui";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -142,13 +142,28 @@ export function EvaluationForm({
           <label className="mb-1 block text-sm font-semibold text-negro">
             {modality.guessLabel}
           </label>
-          <input
-            value={v.estimatedGrape}
-            onChange={(e) => set("estimatedGrape", e.target.value)}
-            maxLength={60}
-            placeholder="Tu apuesta…"
-            className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2.5 text-negro outline-none focus:border-dorado focus:ring-2 focus:ring-[var(--ring)]"
-          />
+          {guessOptions(modalityKey) ? (
+            <select
+              value={v.estimatedGrape}
+              onChange={(e) => set("estimatedGrape", e.target.value)}
+              className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2.5 text-negro outline-none focus:border-dorado focus:ring-2 focus:ring-[var(--ring)]"
+            >
+              <option value="">Elige tu apuesta…</option>
+              {guessOptions(modalityKey)!.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={v.estimatedGrape}
+              onChange={(e) => set("estimatedGrape", e.target.value)}
+              maxLength={60}
+              placeholder="Tu apuesta…"
+              className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2.5 text-negro outline-none focus:border-dorado focus:ring-2 focus:ring-[var(--ring)]"
+            />
+          )}
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-negro">

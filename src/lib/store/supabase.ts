@@ -22,6 +22,9 @@ function toEvent(r: Row): TastingEvent {
     status: r.status as TastingEvent["status"],
     currentIndex: Number(r.current_index ?? 0),
     hostToken: r.host_token as string,
+    doubleBlind: Boolean(r.double_blind),
+    freePace: Boolean(r.free_pace),
+    recoveryCode: (r.recovery_code as string) ?? "",
     createdAt: r.created_at as string,
   };
 }
@@ -77,6 +80,9 @@ export async function insertEvent(e: TastingEvent) {
     status: e.status,
     current_index: e.currentIndex,
     host_token: e.hostToken,
+    double_blind: e.doubleBlind,
+    free_pace: e.freePace,
+    recovery_code: e.recoveryCode,
     created_at: e.createdAt,
   });
   if (error) throw error;
@@ -126,6 +132,21 @@ export async function getItemsForEvent(eventId: string): Promise<TastingItem[]> 
     .order("position", { ascending: true });
   return (data ?? []).map(toItem);
 }
+export async function updateItem(
+  id: string,
+  patch: Partial<Pick<TastingItem, "name" | "producer" | "grape" | "region" | "price" | "imageUrl">>,
+) {
+  const row: Row = {};
+  if (patch.name !== undefined) row.name = patch.name;
+  if (patch.producer !== undefined) row.producer = patch.producer;
+  if (patch.grape !== undefined) row.grape = patch.grape;
+  if (patch.region !== undefined) row.region = patch.region;
+  if (patch.price !== undefined) row.price = patch.price;
+  if (patch.imageUrl !== undefined) row.image_url = patch.imageUrl;
+  if (Object.keys(row).length === 0) return;
+  const { error } = await admin().from("items").update(row).eq("id", id);
+  if (error) throw error;
+}
 
 // ---- Participants ----
 export async function insertParticipant(p: Participant) {
@@ -141,6 +162,11 @@ export async function insertParticipant(p: Participant) {
 export async function getParticipant(id: string): Promise<Participant | undefined> {
   const { data } = await admin().from("participants").select("*").eq("id", id).maybeSingle();
   return data ? toParticipant(data) : undefined;
+}
+export async function removeParticipant(id: string) {
+  // las evaluaciones se borran en cascada (FK on delete cascade)
+  const { error } = await admin().from("participants").delete().eq("id", id);
+  if (error) throw error;
 }
 export async function getParticipantsForEvent(eventId: string): Promise<Participant[]> {
   const { data } = await admin()

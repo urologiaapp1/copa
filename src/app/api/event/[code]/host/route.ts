@@ -37,6 +37,9 @@ export async function GET(
       status: event.status,
       currentIndex: event.currentIndex,
       itemCount: items.length,
+      doubleBlind: event.doubleBlind,
+      freePace: event.freePace,
+      recoveryCode: event.recoveryCode,
     },
     items: items.map((i) => ({
       id: i.id,

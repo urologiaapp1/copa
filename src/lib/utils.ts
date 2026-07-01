@@ -7,10 +7,10 @@ export function cn(...inputs: ClassValue[]) {
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin caracteres ambiguos
 
-/** Código de evento de 6 caracteres, fácil de dictar. */
-export function generateCode(): string {
+/** Código alfanumérico fácil de dictar (por defecto 6 caracteres). */
+export function generateCode(len = 6): string {
   let out = "";
-  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  const bytes = crypto.getRandomValues(new Uint8Array(len));
   for (const b of bytes) out += ALPHABET[b % ALPHABET.length];
   return out;
 }

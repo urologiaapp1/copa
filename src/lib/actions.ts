@@ -17,18 +17,50 @@ import {
 export async function createEvent(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const modality = String(formData.get("modality") ?? "tinto");
-  const itemsRaw = String(formData.get("items") ?? "");
-
-  const names = itemsRaw
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const doubleBlind = formData.get("doubleBlind") === "on";
+  const freePace = formData.get("freePace") === "on";
 
   if (!title) throw new Error("Falta el nombre del evento");
-  if (names.length < 2) throw new Error("Agrega al menos 2 muestras");
+
+  // En doble ciego solo se pide el número de vinos; van numerados y sin info.
+  // En ciego simple se listan las muestras (con info opcional oculta hasta revelar).
+  let items: {
+    name: string;
+    producer: string | null;
+    grape: string | null;
+    price: number | null;
+  }[];
+
+  if (doubleBlind) {
+    const count = Math.floor(Number(formData.get("wineCount") ?? 0));
+    if (!count || count < 2) throw new Error("Indica al menos 2 vinos");
+    if (count > 50) throw new Error("Máximo 50 vinos");
+    items = Array.from({ length: count }, () => ({
+      name: "",
+      producer: null,
+      grape: null,
+      price: null,
+    }));
+  } else {
+    const names = String(formData.get("items") ?? "")
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (names.length < 2) throw new Error("Agrega al menos 2 muestras");
+    items = names.map((line) => {
+      const [name, producer, grape, price] = line.split("|").map((s) => s?.trim());
+      return {
+        name: name || "",
+        producer: producer || null,
+        grape: grape || null,
+        price: price ? Number(price.replace(/[^\d]/g, "")) || null : null,
+      };
+    });
+  }
 
   const code = await uniqueCode();
   const hostToken = generateToken();
+  const recoveryCode = generateCode(8);
   const eventId = generateToken();
 
   await store.insertEvent({
@@ -39,25 +71,26 @@ export async function createEvent(formData: FormData) {
     status: "lobby",
     currentIndex: 0,
     hostToken,
+    doubleBlind,
+    freePace,
+    recoveryCode,
     createdAt: new Date().toISOString(),
   });
 
   await Promise.all(
-    names.map((line, i) => {
-      // formato opcional "Nombre | Productor | Cepa | Precio"
-      const [name, producer, grape, price] = line.split("|").map((s) => s?.trim());
-      return store.insertItem({
+    items.map((it, i) =>
+      store.insertItem({
         id: generateToken(),
         eventId,
         position: i + 1,
-        name: name || `Muestra ${i + 1}`,
-        producer: producer || null,
-        grape: grape || null,
+        name: it.name || `Vino ${i + 1}`,
+        producer: it.producer,
+        grape: it.grape,
         region: null,
-        price: price ? Number(price.replace(/[^\d]/g, "")) || null : null,
+        price: it.price,
         imageUrl: null,
-      });
-    }),
+      }),
+    ),
   );
 
   await setHostCookie(code, hostToken);
@@ -180,4 +213,45 @@ export async function hostSetIndex(code: string, index: number) {
     currentIndex: clamp(index, 0, Math.max(0, count - 1)),
   });
   revalidatePath(`/host/${code}`);
+}
+
+// ---------- Anfitrión: agregar/editar la info de un vino (doble ciego) ----------
+export interface ItemInfoInput {
+  name: string;
+  producer: string;
+  grape: string;
+  price: number | null;
+}
+export async function hostUpdateItem(code: string, itemId: string, info: ItemInfoInput) {
+  const event = await requireHost(code);
+  const item = (await store.getItemsForEvent(event.id)).find((i) => i.id === itemId);
+  if (!item) return { ok: false, error: "Vino no encontrado" };
+  await store.updateItem(itemId, {
+    name: info.name.trim().slice(0, 80) || item.name,
+    producer: info.producer.trim().slice(0, 80) || null,
+    grape: info.grape.trim().slice(0, 60) || null,
+    price: info.price,
+  });
+  revalidatePath(`/host/${code}`);
+  return { ok: true };
+}
+
+// ---------- Anfitrión: eliminar un catador ----------
+export async function hostRemoveParticipant(code: string, participantId: string) {
+  const event = await requireHost(code);
+  const p = await store.getParticipant(participantId);
+  if (p && p.eventId === event.id) await store.removeParticipant(participantId);
+  revalidatePath(`/host/${code}`);
+  return { ok: true };
+}
+
+// ---------- Recuperar acceso admin con código SOS ----------
+export async function recoverHost(formData: FormData) {
+  const code = String(formData.get("code") ?? "").toUpperCase().trim();
+  const recovery = String(formData.get("recovery") ?? "").toUpperCase().trim();
+  const event = await store.getEventByCode(code);
+  if (!event || !event.recoveryCode || event.recoveryCode !== recovery)
+    throw new Error("Código de evento o SOS incorrecto");
+  await setHostCookie(event.code, event.hostToken);
+  redirect(`/host/${event.code}`);
 }

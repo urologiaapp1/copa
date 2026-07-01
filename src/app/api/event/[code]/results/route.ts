@@ -27,7 +27,13 @@ export async function GET(
   }
 
   return NextResponse.json({
-    event: { code: event.code, title: event.title, modality: event.modality, status: event.status },
+    event: {
+      code: event.code,
+      title: event.title,
+      modality: event.modality,
+      status: event.status,
+      doubleBlind: event.doubleBlind,
+    },
     results,
     profile,
   });
