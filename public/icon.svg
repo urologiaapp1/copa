@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Copa Ciega">
+  <rect width="512" height="512" rx="112" fill="#14100f"/>
+  <g fill="none" stroke="#c9a227" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M176 132 h160 a0 0 0 0 1 0 0 c0 78 -36 132 -80 132 s-80 -54 -80 -132 z" fill="#6a1b2a" stroke="#6a1b2a"/>
+    <path d="M176 132 h160 c0 78 -36 132 -80 132 s-80 -54 -80 -132 z"/>
+    <path d="M256 264 v96"/>
+    <path d="M196 380 h120"/>
+  </g>
+  <circle cx="256" cy="180" r="70" fill="#14100f" opacity="0.9"/>
+  <path d="M226 180 a30 30 0 0 0 60 0" fill="none" stroke="#c9a227" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="230" cy="168" r="7" fill="#c9a227"/>
+  <circle cx="282" cy="168" r="7" fill="#c9a227"/>
+</svg>
