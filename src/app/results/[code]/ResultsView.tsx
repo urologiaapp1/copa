@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useLive } from "@/lib/useLive";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, ScoreStamp, StampLabel } from "@/components/ui";
 import { Confetti } from "@/components/Confetti";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { formatCLP } from "@/lib/utils";
@@ -59,7 +59,9 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
           </div>
         )}
         <header className="text-center">
-          <p className="text-xs uppercase tracking-widest text-dorado">{t("results.title")}</p>
+          <StampLabel rotate={-3} className="mb-2 inline-block">
+            {t("results.title")}
+          </StampLabel>
           <h1 className="text-2xl font-bold text-marfil print:text-negro">{data.event.title}</h1>
           <p className="mt-1 text-sm text-marfil/60 print:text-negro/60">
             {t("results.participatedEvals", {
@@ -74,7 +76,7 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
           <Highlight
             title={t("results.winner")}
             name={results.ranking[0]?.item.name}
-            sub={results.ranking[0] ? `${results.ranking[0].avgOverall.toFixed(0)} pts` : undefined}
+            stamp={results.ranking[0] ? results.ranking[0].avgOverall.toFixed(0) : undefined}
           />
           <Highlight
             title={t("results.priceQuality")}
@@ -318,10 +320,21 @@ function RadarBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-function Highlight({ title, name, sub }: { title: string; name?: string; sub?: string }) {
+function Highlight({
+  title,
+  name,
+  sub,
+  stamp,
+}: {
+  title: string;
+  name?: string;
+  sub?: string;
+  stamp?: string;
+}) {
   return (
-    <Card className="p-4">
+    <Card className="p-4 text-center">
       <p className="text-xs text-muted">{title}</p>
+      {stamp && <ScoreStamp value={stamp} size={56} rotate={-5} className="my-1.5" />}
       <p className="mt-1 truncate text-sm font-semibold text-negro">{name ?? "—"}</p>
       {sub && <p className="text-xs text-burdeo">{sub}</p>}
     </Card>

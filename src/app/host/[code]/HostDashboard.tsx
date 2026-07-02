@@ -110,6 +110,8 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
 
             <SosCard recoveryCode={event.recoveryCode} t={t} />
 
+            <div className="ticket-perforation" />
+
             <ModeBadges doubleBlind={event.doubleBlind} freePace={event.freePace} t={t} />
 
             <ParticipantsCard participants={participants} onRemove={removeParticipant} busy={busy} t={t} />

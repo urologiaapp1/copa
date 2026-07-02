@@ -10,6 +10,7 @@
   --marfil-200: #efe7d6;
   --dorado: #c9a227;
   --dorado-soft: #e4c866;
+  --coral: #d85a30;
 
   --background: var(--marfil);
   --foreground: var(--negro);
@@ -32,6 +33,7 @@
   --color-marfil: var(--marfil);
   --color-dorado: var(--dorado);
   --color-dorado-soft: var(--dorado-soft);
+  --color-coral: var(--coral);
   --color-ring: var(--ring);
   --font-sans: var(--font-inter);
   --radius: 0.9rem;
@@ -115,3 +117,17 @@ body {
   100% { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in-up { animation: fade-in-up 0.4s ease both; }
+
+/* Línea de "perforación" tipo ticket, para separar secciones */
+.ticket-perforation {
+  height: 1px;
+  background-image: radial-gradient(circle, rgba(106, 27, 42, 0.35) 1.5px, transparent 1.6px);
+  background-size: 12px 1px;
+  background-repeat: repeat-x;
+}
+.ticket-perforation-light {
+  height: 1px;
+  background-image: radial-gradient(circle, rgba(246, 241, 231, 0.25) 1.5px, transparent 1.6px);
+  background-size: 12px 1px;
+  background-repeat: repeat-x;
+}

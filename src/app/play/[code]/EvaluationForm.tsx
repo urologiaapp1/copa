@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { saveEvaluation, type EvalInput } from "@/lib/actions";
 import { getModality, getModalityGuessLabel, getModalityAromas, guessOptions } from "@/lib/modalities";
-import { Card } from "@/components/ui";
+import { Card, ScoreStamp, StampLabel } from "@/components/ui";
 import { TipBanner } from "@/components/TipBanner";
 import { useI18n } from "@/lib/i18n/context";
 
@@ -21,6 +21,8 @@ const DEFAULT: Omit<EvalInput, "itemId"> = {
   estimatedPrice: null,
   confidence: 3, // ya no se pregunta; queda fijo
 };
+
+const TAG_ROTATIONS = [-2, 1, -1, 2, -1, 1, -2, 1, -1, 2];
 
 export function EvaluationForm({
   code,
@@ -85,31 +87,33 @@ export function EvaluationForm({
 
   return (
     <div className="space-y-4">
-      <Card className="bg-wine border-white/10 p-5">
+      <Card className="bg-wine relative border-white/10 p-5 pt-6">
+        <StampLabel rotate={-4} className="absolute -left-1.5 -top-3 z-10 shadow-sm">
+          {modality.emoji} {t("eval.wineInTasting")}
+        </StampLabel>
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-marfil/50">
-            <span className="text-base">{modality.emoji}</span> {t("eval.wineInTasting")}
-          </span>
+          <p className="text-4xl font-extrabold text-dorado">
+            {t("host.wineLabel", { n: position })}
+          </p>
           <SaveIndicator state={save} t={t} />
         </div>
-        <p className="mt-1 text-4xl font-extrabold text-dorado">
-          {t("host.wineLabel", { n: position })}
-        </p>
 
         {/* Nota general */}
-        <div className="mt-6">
-          <div className="mb-1 flex items-baseline justify-between">
-            <label className="text-sm font-semibold text-marfil/80">{t("eval.overallScore")}</label>
-            <span className="text-3xl font-bold text-marfil">{v.overall}</span>
+        <div className="mt-6 flex items-center gap-4">
+          <ScoreStamp value={v.overall} size={76} rotate={-6} />
+          <div className="flex-1">
+            <label className="mb-1 block text-sm font-semibold text-marfil/80">
+              {t("eval.overallScore")}
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={100}
+              value={v.overall}
+              onChange={(e) => set("overall", Number(e.target.value))}
+              className="tasting-slider w-full"
+            />
           </div>
-          <input
-            type="range"
-            min={1}
-            max={100}
-            value={v.overall}
-            onChange={(e) => set("overall", Number(e.target.value))}
-            className="tasting-slider w-full"
-          />
         </div>
       </Card>
 
@@ -124,18 +128,20 @@ export function EvaluationForm({
       <Card className="p-5">
         <label className="text-sm font-semibold text-negro">{t("eval.perceivedAromas")}</label>
         <div className="mt-3 flex flex-wrap gap-2">
-          {aromaOptions.map((a) => {
+          {aromaOptions.map((a, i) => {
             const on = v.aromas.includes(a);
+            const rotate = on ? 0 : TAG_ROTATIONS[i % TAG_ROTATIONS.length];
             return (
               <button
                 key={a}
                 type="button"
                 onClick={() => toggleAroma(a)}
+                style={{ transform: `rotate(${rotate}deg)` }}
                 className={
-                  "rounded-full border px-3 py-1.5 text-sm transition-colors " +
+                  "rounded-md border-[1.5px] px-3 py-1.5 text-sm transition-all " +
                   (on
                     ? "border-burdeo bg-burdeo text-marfil"
-                    : "border-[var(--border)] bg-white text-negro/70 hover:border-dorado")
+                    : "border-dashed border-burdeo/35 bg-white text-negro/70 hover:border-burdeo/60")
                 }
               >
                 {a}
@@ -204,10 +210,10 @@ export function EvaluationForm({
                 type="button"
                 onClick={() => set("wouldBuy", v.wouldBuy === o.v ? null : o.v)}
                 className={
-                  "flex-1 rounded-[var(--radius)] border px-3 py-2.5 text-sm font-medium transition-colors " +
+                  "flex-1 rounded-[var(--radius)] border-[1.5px] px-3 py-2.5 text-sm font-medium transition-colors " +
                   (v.wouldBuy === o.v
                     ? "border-burdeo bg-burdeo text-marfil"
-                    : "border-[var(--border)] bg-white text-negro/70")
+                    : "border-dashed border-burdeo/30 bg-white text-negro/70 hover:border-burdeo/50")
                 }
               >
                 {o.l}
