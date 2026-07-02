@@ -119,9 +119,6 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
                       {s.item.grape ? s.item.grape : ""}
                       {s.item.grape && s.item.price ? " · " : ""}
                       {s.item.price ? formatCLP(s.item.price) : ""}
-                      {s.wouldBuyPct > 0
-                        ? ` · ${t("results.wouldBuyPct", { pct: s.wouldBuyPct.toFixed(0) })}`
-                        : ""}
                     </p>
                   </div>
                   <span className="font-bold text-burdeo">{s.avgOverall.toFixed(0)}</span>
@@ -172,10 +169,11 @@ function ProfileCard({ profile, t }: { profile: TasterProfile; t: T }) {
           value={profile.priceAccuracy != null ? `${profile.priceAccuracy}%` : "—"}
         />
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-3">
-        <RadarBar label={t("eval.aroma")} value={profile.radar.aroma} />
-        <RadarBar label={t("eval.flavor")} value={profile.radar.flavor} />
-        <RadarBar label={t("eval.balance")} value={profile.radar.balance} />
+      <div className="mt-4 space-y-2.5">
+        <BipolarBar left={t("eval.axisWeak")} right={t("eval.axisAcidic")} value={profile.radar.acidity} />
+        <BipolarBar left={t("eval.axisDry")} right={t("eval.axisSweet")} value={profile.radar.sweetness} />
+        <BipolarBar left={t("eval.axisSmooth")} right={t("eval.axisTannic")} value={profile.radar.tannin} />
+        <BipolarBar left={t("eval.axisLight")} right={t("eval.axisPowerful")} value={profile.radar.body} />
       </div>
 
       {profile.grapeGuesses > 0 && (
@@ -306,15 +304,20 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
-function RadarBar({ label, value }: { label: string; value: number }) {
+/** Barra bipolar: marcador entre dos extremos según el promedio del catador. */
+function BipolarBar({ left, right, value }: { left: string; right: string; value: number }) {
+  const pct = ((value - 1) / 9) * 100;
   return (
     <div>
-      <div className="mb-1 flex justify-between text-xs text-muted">
-        <span>{label}</span>
-        <span>{value.toFixed(1)}</span>
+      <div className="mb-1 flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted">
+        <span>{left}</span>
+        <span>{right}</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-black/5">
-        <div className="h-full rounded-full bg-dorado" style={{ width: `${(value / 10) * 100}%` }} />
+      <div className="relative h-2 rounded-full bg-black/5">
+        <div
+          className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dorado bg-marfil shadow-sm"
+          style={{ left: `${pct}%` }}
+        />
       </div>
     </div>
   );

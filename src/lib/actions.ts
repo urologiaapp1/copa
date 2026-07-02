@@ -144,16 +144,14 @@ export async function joinEvent(formData: FormData) {
 // ---------- Participante: guardar evaluación (autosave) ----------
 export interface EvalInput {
   itemId: string;
-  aroma: number;
-  flavor: number;
-  balance: number;
-  wouldBuy: boolean | null;
+  acidity: number; // 1 = débil, 10 = ácido
+  sweetness: number; // 1 = seco, 10 = dulce
+  tannin: number; // 1 = suave, 10 = tánico
+  body: number; // 1 = ligero, 10 = poderoso
   overall: number;
   notes: string;
-  aromas: string[];
   estimatedGrape: string;
   estimatedPrice: number | null;
-  confidence: number;
 }
 
 export async function saveEvaluation(code: string, input: EvalInput) {
@@ -175,16 +173,14 @@ export async function saveEvaluation(code: string, input: EvalInput) {
     eventId: event.id,
     itemId: input.itemId,
     participantId: p.id,
-    aroma: clamp(input.aroma, 1, 10),
-    flavor: clamp(input.flavor, 1, 10),
-    balance: clamp(input.balance, 1, 10),
-    wouldBuy: input.wouldBuy,
+    acidity: clamp(input.acidity, 1, 10),
+    sweetness: clamp(input.sweetness, 1, 10),
+    tannin: clamp(input.tannin, 1, 10),
+    body: clamp(input.body, 1, 10),
     overall: clamp(input.overall, 1, 100),
     notes: input.notes.slice(0, 500),
-    aromas: input.aromas.slice(0, 12),
     estimatedGrape: input.estimatedGrape.slice(0, 60) || null,
     estimatedPrice: input.estimatedPrice,
-    confidence: clamp(input.confidence, 1, 5),
     updatedAt: new Date().toISOString(),
   });
   return { ok: true };

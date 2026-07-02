@@ -35,19 +35,17 @@ export async function GET(
         item?.name ?? "",
         p?.name ?? "",
         e.overall,
-        e.aroma,
-        e.flavor,
-        e.balance,
-        e.wouldBuy === null ? "" : e.wouldBuy ? "Sí" : "No",
-        e.aromas.join(", "),
+        e.acidity,
+        e.sweetness,
+        e.tannin,
+        e.body,
         e.estimatedGrape ?? "",
         e.estimatedPrice ?? "",
-        e.confidence,
         e.notes ?? "",
       ];
     });
     csv = toCSV(
-      ["Muestra #", "Nombre", "Participante", "Nota general", "Aroma", "Sabor", "Equilibrio", "¿Compraría?", "Aromas", "Estimación", "Precio estimado", "Confianza", "Notas"],
+      ["Vino #", "Nombre", "Catador", "Nota", "Débil-Ácido (1-10)", "Seco-Dulce (1-10)", "Suave-Tánico (1-10)", "Ligero-Poderoso (1-10)", "Estimación", "Precio estimado", "Notas"],
       rows,
     );
     filename = `copa-ciega-${event.code}-evaluaciones.csv`;
@@ -61,15 +59,15 @@ export async function GET(
       s.item.grape ?? "",
       s.item.price ?? "",
       s.avgOverall.toFixed(1),
-      s.avgAroma.toFixed(1),
-      s.avgFlavor.toFixed(1),
-      s.avgBalance.toFixed(1),
+      s.avgAcidity.toFixed(1),
+      s.avgSweetness.toFixed(1),
+      s.avgTannin.toFixed(1),
+      s.avgBody.toFixed(1),
       s.stdDev.toFixed(1),
-      `${s.wouldBuyPct.toFixed(0)}%`,
       s.count,
     ]);
     csv = toCSV(
-      ["Puesto", "Muestra #", "Nombre", "Productor", "Cepa", "Precio", "Nota media", "Aroma", "Sabor", "Equilibrio", "Dispersión", "% compraría", "Votos"],
+      ["Puesto", "Vino #", "Nombre", "Productor", "Cepa", "Precio", "Nota media", "Débil-Ácido", "Seco-Dulce", "Suave-Tánico", "Ligero-Poderoso", "Dispersión", "Votos"],
       rows,
     );
     filename = `copa-ciega-${event.code}-resumen.csv`;

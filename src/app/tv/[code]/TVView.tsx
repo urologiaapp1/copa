@@ -188,11 +188,14 @@ function Tasting({
     rows.push({ icon: "🥰", text: t("tv.mostGenerous", { name: stats.mostGenerous.name }) });
   if (stats?.highestPricer)
     rows.push({ icon: "💸", text: t("tv.higherPrices", { name: stats.highestPricer.name }) });
-  if (stats?.topAroma)
-    rows.push({
-      icon: "👃",
-      text: t("tv.aromaOfMoment", { aroma: stats.topAroma.aroma, name: stats.topAroma.topName ?? "?" }),
-    });
+  if (stats?.mostAcidFinder)
+    rows.push({ icon: "🍋", text: t("tv.mostAcid", { name: stats.mostAcidFinder.name }) });
+  if (stats?.mostSweetFinder)
+    rows.push({ icon: "🍬", text: t("tv.mostSweet", { name: stats.mostSweetFinder.name }) });
+  if (stats?.mostPowerfulFinder)
+    rows.push({ icon: "💪", text: t("tv.mostPowerful", { name: stats.mostPowerfulFinder.name }) });
+  if (stats?.secretKeeper)
+    rows.push({ icon: "🤫", text: t("tv.secretKeeper", { name: stats.secretKeeper.name }) });
 
   return (
     <div className="flex w-full max-w-5xl flex-col items-center gap-8">

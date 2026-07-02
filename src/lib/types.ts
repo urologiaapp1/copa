@@ -40,16 +40,15 @@ export interface Evaluation {
   eventId: string;
   itemId: string;
   participantId: string;
-  aroma: number; // 1-10
-  flavor: number; // 1-10
-  balance: number; // 1-10
-  wouldBuy: boolean | null;
-  overall: number; // 1-100 nota general
+  // Características de sabor: ejes bipolares 1-10
+  acidity: number; // 1 = débil, 10 = ácido
+  sweetness: number; // 1 = seco, 10 = dulce
+  tannin: number; // 1 = suave, 10 = tánico
+  body: number; // 1 = ligero, 10 = poderoso
+  overall: number; // 1-100 nota
   notes: string | null;
-  aromas: string[]; // descriptores seleccionados
   estimatedGrape: string | null;
   estimatedPrice: number | null;
-  confidence: number; // 1-5
   updatedAt: string;
 }
 

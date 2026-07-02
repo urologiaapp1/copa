@@ -35,12 +35,14 @@ export function LiveStatsPanel({ code, dark = false }: { code: string; dark?: bo
       label: t("live.higherPrices"),
       value: `${stats.highestPricer.name} (~${formatCLP(stats.highestPricer.avgPrice)})`,
     });
-  if (stats.topAroma)
-    items.push({
-      icon: "👃",
-      label: t("live.aromaOfMoment"),
-      value: t("live.aromaValue", { aroma: stats.topAroma.aroma, name: stats.topAroma.topName ?? "?" }),
-    });
+  if (stats.mostAcidFinder)
+    items.push({ icon: "🍋", label: t("live.mostAcid"), value: stats.mostAcidFinder.name });
+  if (stats.mostSweetFinder)
+    items.push({ icon: "🍬", label: t("live.mostSweet"), value: stats.mostSweetFinder.name });
+  if (stats.mostPowerfulFinder)
+    items.push({ icon: "💪", label: t("live.mostPowerful"), value: stats.mostPowerfulFinder.name });
+  if (stats.secretKeeper)
+    items.push({ icon: "🤫", label: t("live.secretKeeper"), value: stats.secretKeeper.name });
 
   if (items.length === 0) return null;
 

@@ -5,11 +5,11 @@ export interface ItemStat {
   item: TastingItem;
   count: number; // nº de evaluaciones
   avgOverall: number; // 0-100
-  avgAroma: number;
-  avgFlavor: number;
-  avgBalance: number;
-  stdDev: number; // dispersión de la nota general (divisividad)
-  wouldBuyPct: number; // % que compraría
+  avgAcidity: number; // 1 débil ↔ 10 ácido
+  avgSweetness: number; // 1 seco ↔ 10 dulce
+  avgTannin: number; // 1 suave ↔ 10 tánico
+  avgBody: number; // 1 ligero ↔ 10 poderoso
+  stdDev: number; // dispersión de la nota (divisividad)
   valueScore: number | null; // calidad / precio
 }
 
@@ -43,20 +43,16 @@ export async function computeResults(eventId: string): Promise<EventResults> {
     const es = evals.filter((e) => e.itemId === item.id);
     const overalls = es.map((e) => e.overall);
     const avgOverall = mean(overalls);
-    const wouldBuyVotes = es.filter((e) => e.wouldBuy !== null);
-    const wouldBuyPct = wouldBuyVotes.length
-      ? (wouldBuyVotes.filter((e) => e.wouldBuy).length / wouldBuyVotes.length) * 100
-      : 0;
     const valueScore = item.price && item.price > 0 ? avgOverall / (item.price / 1000) : null;
     return {
       item,
       count: es.length,
       avgOverall,
-      avgAroma: mean(es.map((e) => e.aroma)),
-      avgFlavor: mean(es.map((e) => e.flavor)),
-      avgBalance: mean(es.map((e) => e.balance)),
+      avgAcidity: mean(es.map((e) => e.acidity)),
+      avgSweetness: mean(es.map((e) => e.sweetness)),
+      avgTannin: mean(es.map((e) => e.tannin)),
+      avgBody: mean(es.map((e) => e.body)),
       stdDev: std(overalls),
-      wouldBuyPct,
       valueScore,
     };
   });
@@ -102,7 +98,10 @@ export interface LiveStats {
   highestPricer: { name: string; avgPrice: number } | null; // precios más altos
   mostGenerous: { name: string; avgOverall: number } | null; // mejor valora los vinos
   toughestCritic: { name: string; avgOverall: number } | null; // el más exigente
-  topAroma: { aroma: string; count: number; topName: string | null } | null; // sabor del momento
+  mostAcidFinder: { name: string; avg: number } | null; // más ácidos los encuentra
+  mostSweetFinder: { name: string; avg: number } | null; // más dulces los encuentra
+  mostPowerfulFinder: { name: string; avg: number } | null; // más vinos poderosos
+  secretKeeper: { name: string } | null; // al azar (estable por evento), puro humor
 }
 
 export async function computeLiveStats(eventId: string): Promise<LiveStats> {
@@ -117,7 +116,10 @@ export async function computeLiveStats(eventId: string): Promise<LiveStats> {
     highestPricer: null,
     mostGenerous: null,
     toughestCritic: null,
-    topAroma: null,
+    mostAcidFinder: null,
+    mostSweetFinder: null,
+    mostPowerfulFinder: null,
+    secretKeeper: null,
   };
   if (evals.length === 0) return empty;
 
@@ -133,6 +135,9 @@ export async function computeLiveStats(eventId: string): Promise<LiveStats> {
   let highestPricer: LiveStats["highestPricer"] = null;
   let mostGenerous: LiveStats["mostGenerous"] = null;
   let toughestCritic: LiveStats["toughestCritic"] = null;
+  let mostAcidFinder: LiveStats["mostAcidFinder"] = null;
+  let mostSweetFinder: LiveStats["mostSweetFinder"] = null;
+  let mostPowerfulFinder: LiveStats["mostPowerfulFinder"] = null;
 
   for (const [pid, list] of byParticipant) {
     const name = nameOf(pid);
@@ -147,25 +152,25 @@ export async function computeLiveStats(eventId: string): Promise<LiveStats> {
     const avgOverall = mean(list.map((e) => e.overall));
     if (!mostGenerous || avgOverall > mostGenerous.avgOverall) mostGenerous = { name, avgOverall };
     if (!toughestCritic || avgOverall < toughestCritic.avgOverall) toughestCritic = { name, avgOverall };
+
+    const avgAcidity = mean(list.map((e) => e.acidity));
+    if (!mostAcidFinder || avgAcidity > mostAcidFinder.avg) mostAcidFinder = { name, avg: avgAcidity };
+    const avgSweetness = mean(list.map((e) => e.sweetness));
+    if (!mostSweetFinder || avgSweetness > mostSweetFinder.avg)
+      mostSweetFinder = { name, avg: avgSweetness };
+    const avgBody = mean(list.map((e) => e.body));
+    if (!mostPowerfulFinder || avgBody > mostPowerfulFinder.avg)
+      mostPowerfulFinder = { name, avg: avgBody };
   }
 
-  // Descriptor de aroma más mencionado, y quién más lo ha sentido
-  const aromaCounts = new Map<string, number>();
-  const aromaByParticipant = new Map<string, Map<string, number>>();
-  for (const e of evals) {
-    for (const a of e.aromas) {
-      aromaCounts.set(a, (aromaCounts.get(a) ?? 0) + 1);
-      const perP = aromaByParticipant.get(a) ?? new Map<string, number>();
-      perP.set(e.participantId, (perP.get(e.participantId) ?? 0) + 1);
-      aromaByParticipant.set(a, perP);
-    }
-  }
-  let topAroma: LiveStats["topAroma"] = null;
-  if (aromaCounts.size > 0) {
-    const [aroma, count] = [...aromaCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-    const perP = aromaByParticipant.get(aroma)!;
-    const [topPid] = [...perP.entries()].sort((a, b) => b[1] - a[1])[0];
-    topAroma = { aroma, count, topName: nameOf(topPid) };
+  // "El que esconde un secreto": participante al azar pero estable durante el
+  // evento (semilla = id del evento), así el chiste apunta a la misma persona
+  // toda la noche.
+  let secretKeeper: LiveStats["secretKeeper"] = null;
+  if (participants.length > 0) {
+    let seed = 0;
+    for (const ch of eventId) seed = (seed * 31 + ch.charCodeAt(0)) % 100003;
+    secretKeeper = { name: participants[seed % participants.length].name };
   }
 
   return {
@@ -174,7 +179,10 @@ export async function computeLiveStats(eventId: string): Promise<LiveStats> {
     highestPricer,
     mostGenerous,
     toughestCritic,
-    topAroma,
+    mostAcidFinder,
+    mostSweetFinder,
+    mostPowerfulFinder,
+    secretKeeper,
   };
 }
 
@@ -197,7 +205,7 @@ export interface TasterProfile {
   priceAccuracy: number | null; // 0-100, precisión de precio estimado
   grapeHits: number; // aciertos de cepa/estimación (texto contiene)
   grapeGuesses: number; // cuántas veces intentó adivinar la cepa (con cepa real)
-  radar: { aroma: number; flavor: number; balance: number };
+  radar: { acidity: number; sweetness: number; tannin: number; body: number };
   report: WineReportRow[]; // detalle por vino (informe de aciertos)
 }
 
@@ -260,9 +268,10 @@ export async function computeTasterProfile(
     grapeHits,
     grapeGuesses,
     radar: {
-      aroma: mean(mine.map((e) => e.aroma)),
-      flavor: mean(mine.map((e) => e.flavor)),
-      balance: mean(mine.map((e) => e.balance)),
+      acidity: mean(mine.map((e) => e.acidity)),
+      sweetness: mean(mine.map((e) => e.sweetness)),
+      tannin: mean(mine.map((e) => e.tannin)),
+      body: mean(mine.map((e) => e.body)),
     },
     report,
   };

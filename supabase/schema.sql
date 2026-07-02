@@ -47,16 +47,15 @@ create table if not exists evaluations (
   event_id uuid not null references events(id) on delete cascade,
   item_id uuid not null references items(id) on delete cascade,
   participant_id uuid not null references participants(id) on delete cascade,
-  aroma int not null,
-  flavor int not null,
-  balance int not null,
-  would_buy boolean,
+  -- características de sabor: ejes bipolares 1-10
+  acidity int not null default 5,   -- 1 = débil, 10 = ácido
+  sweetness int not null default 5, -- 1 = seco, 10 = dulce
+  tannin int not null default 5,    -- 1 = suave, 10 = tánico
+  body int not null default 5,      -- 1 = ligero, 10 = poderoso
   overall int not null,
   notes text,
-  aromas text[] not null default '{}',
   estimated_grape text,
   estimated_price numeric,
-  confidence int not null default 3,
   updated_at timestamptz not null default now(),
   unique (item_id, participant_id)
 );
