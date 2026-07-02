@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePolling } from "@/lib/usePolling";
+import { useLive } from "@/lib/useLive";
 import { getModality } from "@/lib/modalities";
 import { Button, Card } from "@/components/ui";
 import { EvaluationForm } from "./EvaluationForm";
+import { LiveStatsPanel } from "@/components/LiveStats";
+import { TipBanner } from "@/components/TipBanner";
 import type { EvalInput } from "@/lib/actions";
 import type { EventStatus } from "@/lib/types";
 
@@ -42,7 +44,10 @@ export function PlayExperience({
   modality: string;
   name: string;
 }) {
-  const { data } = usePolling<StateData>(`/api/event/${code}/state`, 2000);
+  const { data } = useLive<StateData>(
+    `/api/event/${code}/state`,
+    `/api/event/${code}/stream`,
+  );
   const [openItem, setOpenItem] = useState<string | null>(null);
 
   if (!data) return <Center>Cargando…</Center>;
@@ -88,11 +93,14 @@ export function PlayExperience({
         </header>
 
         {event.status === "lobby" && (
-          <Waiting
-            title="Esperando al anfitrión"
-            subtitle="La cata comenzará en breve. No cierres esta pantalla."
-            extra={`${data.participants.length} personas conectadas`}
-          />
+          <div className="space-y-4">
+            <Waiting
+              title="Esperando al anfitrión"
+              subtitle="La cata comenzará en breve. No cierres esta pantalla."
+              extra={`${data.participants.length} personas conectadas`}
+            />
+            <TipBanner />
+          </div>
         )}
 
         {/* TASTING — ritmo libre: lista de todos los vinos */}
@@ -115,6 +123,7 @@ export function PlayExperience({
             </div>
           ) : (
             <div className="space-y-3">
+              <LiveStatsPanel code={code} dark />
               <p className="text-sm text-marfil/70">
                 Evalúa los vinos en el orden que quieras. Puedes volver y cambiar tu nota cuando
                 quieras.
@@ -151,21 +160,28 @@ export function PlayExperience({
 
         {/* TASTING — modo guiado: solo el vino activo */}
         {event.status === "tasting" && !event.freePace && data.currentItemId && (
-          <EvaluationForm
-            code={code}
-            itemId={data.currentItemId}
-            position={data.currentItemPosition ?? event.currentIndex + 1}
-            modalityKey={modality}
-            initial={data.myCurrentEval}
-          />
+          <div className="space-y-4">
+            <LiveStatsPanel code={code} dark />
+            <EvaluationForm
+              code={code}
+              itemId={data.currentItemId}
+              position={data.currentItemPosition ?? event.currentIndex + 1}
+              modalityKey={modality}
+              initial={data.myCurrentEval}
+            />
+          </div>
         )}
 
         {event.status === "closed" && (
-          <Waiting
-            title="Votación cerrada"
-            subtitle="Gracias por participar. Espera la gran revelación del anfitrión."
-            extra={`Completaste ${data.myEvaluatedCount} de ${event.itemCount} vinos`}
-          />
+          <div className="space-y-4">
+            <Waiting
+              title="Votación cerrada"
+              subtitle="Gracias por participar. Espera la gran revelación del anfitrión."
+              extra={`Completaste ${data.myEvaluatedCount} de ${event.itemCount} vinos`}
+            />
+            <LiveStatsPanel code={code} />
+            <TipBanner />
+          </div>
         )}
 
         {event.status === "revealed" && (

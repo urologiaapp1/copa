@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { usePolling } from "@/lib/usePolling";
+import { useLive } from "@/lib/useLive";
 import { getModality } from "@/lib/modalities";
 import { Confetti } from "@/components/Confetti";
 import { formatCLP } from "@/lib/utils";
-import type { EventResults } from "@/lib/results";
+import { randomTip } from "@/lib/tips";
+import type { EventResults, LiveStats } from "@/lib/results";
 import type { EventStatus } from "@/lib/types";
 
 interface StateData {
@@ -25,14 +26,23 @@ interface StateData {
 interface ResultsData {
   results: EventResults;
 }
+interface LivePayload {
+  stats: LiveStats;
+}
 
 export function TVView({ code, joinUrl }: { code: string; joinUrl: string }) {
-  const { data } = usePolling<StateData>(`/api/event/${code}/state`, 1500);
+  const streamUrl = `/api/event/${code}/stream`;
+  const { data } = useLive<StateData>(`/api/event/${code}/state`, streamUrl);
   const status = data?.event.status;
   // Sólo pedimos resultados cuando ya están revelados (endpoint público entonces)
-  const { data: res } = usePolling<ResultsData>(
+  const { data: res } = useLive<ResultsData>(
     status === "revealed" ? `/api/event/${code}/results` : null,
-    2500,
+    status === "revealed" ? streamUrl : null,
+  );
+  const { data: live } = useLive<LivePayload>(
+    status === "tasting" ? `/api/event/${code}/live` : null,
+    status === "tasting" ? streamUrl : null,
+    8000,
   );
 
   if (!data)
@@ -65,6 +75,7 @@ export function TVView({ code, joinUrl }: { code: string; joinUrl: string }) {
           total={event.itemCount}
           responses={data.responsesForCurrent}
           people={participants.length}
+          stats={live?.stats ?? null}
         />
       )}
 
@@ -137,20 +148,31 @@ function Tasting({
   total,
   responses,
   people,
+  stats,
 }: {
   position: number;
   total: number;
   responses: number;
   people: number;
+  stats: LiveStats | null;
 }) {
   const pct = people ? Math.round((responses / people) * 100) : 0;
   const R = 130;
   const C = 2 * Math.PI * R;
+
+  const rows: { icon: string; text: string }[] = [];
+  if (stats?.mostActive) rows.push({ icon: "🏃", text: `${stats.mostActive.name} va más rápido` });
+  if (stats?.mostGenerous) rows.push({ icon: "🥰", text: `${stats.mostGenerous.name} es el más generoso puntuando` });
+  if (stats?.highestPricer)
+    rows.push({ icon: "💸", text: `${stats.highestPricer.name} le pone precios más altos` });
+  if (stats?.topAroma)
+    rows.push({ icon: "👃", text: `"${stats.topAroma.aroma}" es el aroma del momento (${stats.topAroma.topName})` });
+
   return (
-    <div className="flex flex-col items-center gap-8">
+    <div className="flex w-full max-w-5xl flex-col items-center gap-8">
       <p className="text-3xl uppercase tracking-widest text-dorado">Catando ahora</p>
       <p className="text-9xl font-extrabold text-marfil">
-        Muestra {position}
+        Vino {position}
         <span className="text-5xl text-marfil/40"> / {total}</span>
       </p>
       <div className="relative flex items-center justify-center">
@@ -174,7 +196,30 @@ function Tasting({
           <span className="text-2xl text-marfil/50">de {people} votos</span>
         </div>
       </div>
+
+      {rows.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-x-10 gap-y-2">
+          {rows.map((r, i) => (
+            <span key={i} className="animate-fade-in-up text-xl text-marfil/70">
+              {r.icon} {r.text}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <TVTipBanner />
     </div>
+  );
+}
+
+function TVTipBanner() {
+  const [tip, setTip] = useState(() => randomTip());
+  useEffect(() => {
+    const id = setInterval(() => setTip((prev) => randomTip(prev)), 12000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <p className="max-w-3xl text-center text-lg italic text-marfil/40">“{tip}”</p>
   );
 }
 

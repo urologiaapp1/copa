@@ -2,20 +2,24 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePolling } from "@/lib/usePolling";
+import { useLive } from "@/lib/useLive";
 import { Button, Card } from "@/components/ui";
 import { Confetti } from "@/components/Confetti";
 import { formatCLP } from "@/lib/utils";
-import type { EventResults, TasterProfile } from "@/lib/results";
+import type { EventResults, TasterProfile, TasterLeaderboard } from "@/lib/results";
 
 interface Payload {
   event: { code: string; title: string; modality: string; status: string };
   results: EventResults;
   profile: TasterProfile | null;
+  leaderboard: TasterLeaderboard;
 }
 
 export function ResultsView({ code, print = false }: { code: string; print?: boolean }) {
-  const { data, error } = usePolling<Payload>(`/api/event/${code}/results`, 4000);
+  const { data, error } = useLive<Payload>(
+    `/api/event/${code}/results`,
+    `/api/event/${code}/stream`,
+  );
   const printed = useRef(false);
 
   useEffect(() => {
@@ -38,7 +42,7 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
     );
   if (!data) return <Center>Cargando resultados…</Center>;
 
-  const { results, profile } = data;
+  const { results, profile, leaderboard } = data;
 
   return (
     <main className="bg-wine min-h-dvh px-5 py-8 print:bg-white print:py-2">
@@ -112,6 +116,9 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
           </div>
         </Card>
 
+        {/* Ranking de catadores */}
+        {leaderboard.rows.length > 0 && <TasterLeaderboardCard leaderboard={leaderboard} />}
+
         {/* Perfil del catador */}
         {profile && profile.evaluated > 0 && <ProfileCard profile={profile} />}
 
@@ -182,6 +189,81 @@ function ProfileCard({ profile }: { profile: TasterProfile }) {
                 </span>
                 {r.grapeHit === true && <span className="text-green-700">✓</span>}
                 {r.grapeHit === false && <span className="text-red-500">✗</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function TasterLeaderboardCard({ leaderboard }: { leaderboard: TasterLeaderboard }) {
+  const { rows, bestPriceGuesser, bestGrapeGuesser } = leaderboard;
+  const byPrice = [...rows]
+    .filter((r) => r.priceAccuracy !== null)
+    .sort((a, b) => (b.priceAccuracy ?? 0) - (a.priceAccuracy ?? 0));
+  const byGrape = [...rows]
+    .filter((r) => r.grapeGuesses > 0)
+    .sort((a, b) => b.grapeHits - a.grapeHits);
+
+  return (
+    <Card className="p-5">
+      <p className="mb-3 text-sm font-semibold text-negro">Ranking de catadores</p>
+
+      {(bestPriceGuesser || bestGrapeGuesser) && (
+        <div className="mb-4 grid gap-3 sm:grid-cols-2">
+          {bestPriceGuesser && (
+            <div className="rounded-xl bg-dorado/10 p-3 text-center">
+              <p className="text-xs text-muted">💰 Se acercó más al valor real</p>
+              <p className="mt-1 text-lg font-bold text-burdeo">{bestPriceGuesser.name}</p>
+              <p className="text-xs text-muted">{bestPriceGuesser.priceAccuracy}% de precisión</p>
+            </div>
+          )}
+          {bestGrapeGuesser && (
+            <div className="rounded-xl bg-burdeo/10 p-3 text-center">
+              <p className="text-xs text-muted">🍇 Mejor nariz para las cepas</p>
+              <p className="mt-1 text-lg font-bold text-burdeo">{bestGrapeGuesser.name}</p>
+              <p className="text-xs text-muted">
+                {bestGrapeGuesser.grapeHits}/{bestGrapeGuesser.grapeGuesses} aciertos
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {byPrice.length > 0 && (
+        <div className="mb-3">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+            Precisión de precio
+          </p>
+          <div className="space-y-1">
+            {byPrice.map((r, i) => (
+              <div key={r.participantId} className="flex items-center justify-between text-sm">
+                <span className="text-negro">
+                  {i + 1}. {r.name}
+                </span>
+                <span className="font-medium text-burdeo">{r.priceAccuracy}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {byGrape.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+            Aciertos de cepa
+          </p>
+          <div className="space-y-1">
+            {byGrape.map((r, i) => (
+              <div key={r.participantId} className="flex items-center justify-between text-sm">
+                <span className="text-negro">
+                  {i + 1}. {r.name}
+                </span>
+                <span className="font-medium text-burdeo">
+                  {r.grapeHits}/{r.grapeGuesses}
+                </span>
               </div>
             ))}
           </div>

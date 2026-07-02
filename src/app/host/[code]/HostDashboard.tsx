@@ -5,10 +5,11 @@ import Link from "next/link";
 import { QRShare } from "@/components/QRShare";
 import { Confetti } from "@/components/Confetti";
 import { Button, Card, Badge } from "@/components/ui";
-import { usePolling } from "@/lib/usePolling";
+import { useLive } from "@/lib/useLive";
 import { hostRemoveParticipant, hostSetIndex, hostSetStatus, hostUpdateItem } from "@/lib/actions";
 import { getModality, CHILEAN_RED_GRAPES } from "@/lib/modalities";
 import { formatCLP } from "@/lib/utils";
+import { LiveStatsPanel } from "@/components/LiveStats";
 import type { EventResults } from "@/lib/results";
 import type { EventStatus } from "@/lib/types";
 
@@ -39,7 +40,10 @@ interface HostData {
 }
 
 export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string }) {
-  const { data, error } = usePolling<HostData>(`/api/event/${code}/host`, 2000);
+  const { data, error } = useLive<HostData>(
+    `/api/event/${code}/host`,
+    `/api/event/${code}/stream`,
+  );
   const [busy, setBusy] = useState(false);
 
   if (error === "unauthorized")
@@ -164,6 +168,8 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
                 </div>
               </Card>
             )}
+
+            <LiveStatsPanel code={code} />
 
             {event.doubleBlind && (
               <ItemEditor code={code} items={data.items} modalityKey={event.modality} />

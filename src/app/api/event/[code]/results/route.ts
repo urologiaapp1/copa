@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import * as store from "@/lib/store";
 import { getHostToken, getParticipantSession } from "@/lib/session";
-import { computeResults, computeTasterProfile } from "@/lib/results";
+import { computeResults, computeTasterProfile, computeTasterLeaderboard } from "@/lib/results";
 
 /** Resultados con nombres revelados. Sólo tras la revelación (o para el host). */
 export async function GET(
@@ -17,6 +17,7 @@ export async function GET(
     return NextResponse.json({ error: "not_revealed" }, { status: 403 });
 
   const results = await computeResults(event.id);
+  const leaderboard = await computeTasterLeaderboard(event.id);
 
   let profile = null;
   const session = await getParticipantSession(code);
@@ -36,5 +37,6 @@ export async function GET(
     },
     results,
     profile,
+    leaderboard,
   });
 }

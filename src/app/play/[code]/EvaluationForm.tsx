@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { saveEvaluation, type EvalInput } from "@/lib/actions";
 import { getModality, guessOptions } from "@/lib/modalities";
 import { Card } from "@/components/ui";
+import { TipBanner } from "@/components/TipBanner";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -17,7 +18,7 @@ const DEFAULT: Omit<EvalInput, "itemId"> = {
   aromas: [],
   estimatedGrape: "",
   estimatedPrice: null,
-  confidence: 3,
+  confidence: 3, // ya no se pregunta; queda fijo
 };
 
 export function EvaluationForm({
@@ -39,7 +40,7 @@ export function EvaluationForm({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
 
-  // Reinicia el formulario al cambiar de muestra
+  // Reinicia el formulario al cambiar de vino
   useEffect(() => {
     setV({ ...DEFAULT, ...initial });
     setSave(initial ? "saved" : "idle");
@@ -79,20 +80,20 @@ export function EvaluationForm({
 
   return (
     <div className="space-y-4">
-      <Card className="p-5">
+      <Card className="bg-wine border-white/10 p-5">
         <div className="flex items-center justify-between">
-          <span className="text-xs uppercase tracking-widest text-muted">
-            Muestra en cata
+          <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-marfil/50">
+            <span className="text-base">{modality.emoji}</span> Vino en cata
           </span>
           <SaveIndicator state={save} />
         </div>
-        <p className="mt-1 text-3xl font-bold text-burdeo">Muestra {position}</p>
+        <p className="mt-1 text-4xl font-extrabold text-dorado">Vino {position}</p>
 
         {/* Nota general */}
-        <div className="mt-5">
+        <div className="mt-6">
           <div className="mb-1 flex items-baseline justify-between">
-            <label className="text-sm font-semibold text-negro">Nota general</label>
-            <span className="text-2xl font-bold text-dorado">{v.overall}</span>
+            <label className="text-sm font-semibold text-marfil/80">Nota general</label>
+            <span className="text-3xl font-bold text-marfil">{v.overall}</span>
           </div>
           <input
             type="range"
@@ -100,10 +101,12 @@ export function EvaluationForm({
             max={100}
             value={v.overall}
             onChange={(e) => set("overall", Number(e.target.value))}
-            className="w-full accent-[var(--burdeo)]"
+            className="tasting-slider w-full"
           />
         </div>
       </Card>
+
+      <TipBanner />
 
       <Card className="space-y-4 p-5">
         <Slider label="Aroma" value={v.aroma} onChange={(n) => set("aroma", n)} />
@@ -209,25 +212,6 @@ export function EvaluationForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-negro">
-            Confianza en tu respuesta
-          </label>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => set("confidence", n)}
-                className="text-2xl transition-transform hover:scale-110"
-                aria-label={`Confianza ${n}`}
-              >
-                {n <= v.confidence ? "★" : "☆"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
           <label className="mb-1 block text-sm font-semibold text-negro">Notas</label>
           <textarea
             value={v.notes}
@@ -264,7 +248,7 @@ function Slider({
         max={10}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[var(--burdeo)]"
+        className="tasting-slider w-full"
       />
     </div>
   );
@@ -272,10 +256,10 @@ function Slider({
 
 function SaveIndicator({ state }: { state: SaveState }) {
   const map: Record<SaveState, { t: string; c: string }> = {
-    idle: { t: "Sin guardar", c: "text-muted" },
-    saving: { t: "Guardando…", c: "text-muted" },
-    saved: { t: "Guardado ✓", c: "text-green-700" },
-    error: { t: "Error al guardar", c: "text-red-600" },
+    idle: { t: "Sin guardar", c: "text-marfil/50" },
+    saving: { t: "Guardando…", c: "text-marfil/50" },
+    saved: { t: "Guardado ✓", c: "text-dorado" },
+    error: { t: "Error al guardar", c: "text-red-400" },
   };
   const s = map[state];
   return <span className={`text-xs font-medium ${s.c}`}>{s.t}</span>;
