@@ -72,6 +72,13 @@ export default function Home() {
         </Card>
 
         <p className="mt-8 text-center text-xs text-marfil/40">{t("home.footerCategories")}</p>
+
+        <p className="mt-4 text-center text-xs text-marfil/50">
+          {t("create.lostAccess")}{" "}
+          <Link href="/recover" className="text-dorado hover:underline">
+            {t("create.recoverLink")}
+          </Link>
+        </p>
       </div>
     </main>
   );
