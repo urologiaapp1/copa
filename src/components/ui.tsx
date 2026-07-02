@@ -83,8 +83,8 @@ export function ScoreStamp({
       }}
     >
       <span
-        className="font-black leading-none"
-        style={{ color, fontSize: size * 0.36, transform: `rotate(${-rotate}deg)` }}
+        className="font-serif font-bold leading-none"
+        style={{ color, fontSize: size * 0.42, transform: `rotate(${-rotate}deg)` }}
       >
         {value}
       </span>
@@ -105,7 +105,7 @@ export function StampLabel({
   return (
     <span
       className={cn(
-        "inline-block rounded-md bg-burdeo px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-marfil",
+        "inline-block whitespace-nowrap rounded-md bg-burdeo px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-marfil shadow-md",
         className,
       )}
       style={{ transform: `rotate(${rotate}deg)` }}

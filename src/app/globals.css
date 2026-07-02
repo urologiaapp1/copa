@@ -36,6 +36,7 @@
   --color-coral: var(--coral);
   --color-ring: var(--ring);
   --font-sans: var(--font-inter);
+  --font-serif: var(--font-cormorant), Georgia, serif;
   --radius: 0.9rem;
 }
 
@@ -118,10 +119,30 @@ body {
 }
 .animate-fade-in-up { animation: fade-in-up 0.4s ease both; }
 
+/* Tarjeta oscura de cata: gradiente sutil que la separa de las tarjetas claras */
+.bg-card-dark {
+  background: linear-gradient(180deg, #241614 0%, #1a110f 100%);
+}
+
+/* Muesca perforada de ticket (posicionar con left/right en un padre relative) */
+.ticket-notch {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #17110f;
+}
+
 /* Línea de "perforación" tipo ticket, para separar secciones */
 .ticket-perforation {
   height: 1px;
   background-image: radial-gradient(circle, rgba(106, 27, 42, 0.35) 1.5px, transparent 1.6px);
+  background-size: 12px 1px;
+  background-repeat: repeat-x;
+}
+.ticket-perforation-gold {
+  height: 1px;
+  background-image: radial-gradient(circle, rgba(201, 162, 39, 0.55) 1.5px, transparent 1.6px);
   background-size: 12px 1px;
   background-repeat: repeat-x;
 }

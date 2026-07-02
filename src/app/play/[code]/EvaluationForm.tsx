@@ -87,12 +87,12 @@ export function EvaluationForm({
 
   return (
     <div className="space-y-4">
-      <Card className="bg-wine relative border-white/10 p-5 pt-6">
+      <Card className="bg-card-dark relative border-white/10 p-5 pt-6 text-marfil">
         <StampLabel rotate={-4} className="absolute -left-1.5 -top-3 z-10 shadow-sm">
           {modality.emoji} {t("eval.wineInTasting")}
         </StampLabel>
         <div className="flex items-center justify-between">
-          <p className="text-4xl font-extrabold text-dorado">
+          <p className="font-serif text-[2.5rem] font-semibold leading-none text-dorado">
             {t("host.wineLabel", { n: position })}
           </p>
           <SaveIndicator state={save} t={t} />
@@ -251,7 +251,7 @@ function Slider({
     <div>
       <div className="mb-1 flex items-baseline justify-between">
         <label className="text-sm font-medium text-negro/80">{label}</label>
-        <span className="text-sm font-semibold text-burdeo">{value}/10</span>
+        <span className="font-serif text-lg font-bold text-burdeo">{value}<span className="text-xs text-muted">/10</span></span>
       </div>
       <input
         type="range"

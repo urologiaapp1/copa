@@ -16,8 +16,9 @@ export default function Home() {
         </div>
         <header className="mb-10 mt-4 text-center">
           <div className="mb-3 text-5xl">🍷</div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-marfil">
-            Copa <span className="text-dorado">Ciega</span>
+          <div className="ticket-perforation-gold mx-auto mb-3 w-28" />
+          <h1 className="font-serif text-5xl font-semibold tracking-tight text-marfil">
+            Copa <em className="italic text-dorado">Ciega</em>
           </h1>
           <p className="mx-auto mt-3 max-w-xs text-sm leading-relaxed text-marfil/70">
             {t("home.tagline")}
@@ -32,15 +33,17 @@ export default function Home() {
           </Link>
           <p className="mt-2 text-center text-xs text-muted">{t("home.readyIn")}</p>
 
-          <div className="my-6 flex items-center gap-3 text-xs text-muted">
-            <span className="h-px flex-1 bg-[var(--border)]" />
+          <div className="relative -mx-6 my-6 flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-muted">
+            <span className="ticket-notch -left-[9px]" />
+            <span className="ticket-perforation flex-1" />
             {t("home.or")}
-            <span className="h-px flex-1 bg-[var(--border)]" />
+            <span className="ticket-perforation flex-1" />
+            <span className="ticket-notch -right-[9px]" />
           </div>
 
           <form action={joinEvent} className="space-y-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-negro/70">
+              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-burdeo">
                 {t("home.eventCode")}
               </label>
               <input
@@ -54,7 +57,7 @@ export default function Home() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-negro/70">
+              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-burdeo">
                 {t("home.yourName")}
               </label>
               <input
