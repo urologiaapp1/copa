@@ -24,13 +24,18 @@ export function QRShare({ url, code }: { url: string; code: string }) {
       try {
         await navigator.share({ title: "Copa Ciega", text: t("qr.shareText", { code }), url });
         return;
-      } catch {
-        /* cancelado */
+      } catch (err) {
+        // El usuario canceló el share sheet: no seguimos al fallback de portapapeles.
+        if (err instanceof Error && err.name === "AbortError") return;
       }
     }
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* portapapeles no disponible; el enlace/QR siguen visibles en pantalla */
+    }
   }
 
   return (
