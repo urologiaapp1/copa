@@ -3,12 +3,17 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { useLive } from "@/lib/useLive";
-import { getModality } from "@/lib/modalities";
+import { getModality, getModalityLabel } from "@/lib/modalities";
 import { Confetti } from "@/components/Confetti";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { formatCLP } from "@/lib/utils";
 import { randomTip } from "@/lib/tips";
+import { useI18n } from "@/lib/i18n/context";
 import type { EventResults, LiveStats } from "@/lib/results";
 import type { EventStatus } from "@/lib/types";
+import type { Locale } from "@/lib/i18n/locales";
+
+type T = (key: string, vars?: Record<string, string | number>) => string;
 
 interface StateData {
   event: {
@@ -31,6 +36,7 @@ interface LivePayload {
 }
 
 export function TVView({ code, joinUrl }: { code: string; joinUrl: string }) {
+  const { t, locale } = useI18n();
   const streamUrl = `/api/event/${code}/stream`;
   const { data } = useLive<StateData>(`/api/event/${code}/state`, streamUrl);
   const status = data?.event.status;
@@ -46,7 +52,11 @@ export function TVView({ code, joinUrl }: { code: string; joinUrl: string }) {
   );
 
   if (!data)
-    return <Screen><p className="text-3xl text-marfil/60">Cargando…</p></Screen>;
+    return (
+      <Screen>
+        <p className="text-3xl text-marfil/60">{t("common.loading")}</p>
+      </Screen>
+    );
 
   const { event, participants } = data;
   const mod = getModality(event.modality);
@@ -60,13 +70,16 @@ export function TVView({ code, joinUrl }: { code: string; joinUrl: string }) {
         <span className="text-2xl font-bold tracking-tight text-marfil">
           🍷 Copa <span className="text-dorado">Ciega</span>
         </span>
-        <span className="text-xl text-marfil/60">
-          {mod.emoji} {mod.label}
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="text-xl text-marfil/60">
+            {mod.emoji} {getModalityLabel(event.modality, locale)}
+          </span>
+          <LanguageSwitcher dark />
+        </div>
       </div>
 
       {event.status === "lobby" && (
-        <Lobby title={event.title} code={event.code} joinUrl={joinUrl} participants={participants} />
+        <Lobby title={event.title} code={event.code} joinUrl={joinUrl} participants={participants} t={t} />
       )}
 
       {event.status === "tasting" && (
@@ -76,18 +89,20 @@ export function TVView({ code, joinUrl }: { code: string; joinUrl: string }) {
           responses={data.responsesForCurrent}
           people={participants.length}
           stats={live?.stats ?? null}
+          t={t}
+          locale={locale}
         />
       )}
 
       {event.status === "closed" && (
         <div className="flex flex-col items-center gap-6">
           <div className="h-20 w-20 animate-spin rounded-full border-8 border-dorado/30 border-t-dorado" />
-          <p className="text-5xl font-bold text-marfil">Votación cerrada</p>
-          <p className="text-2xl text-marfil/60">Preparando la gran revelación…</p>
+          <p className="text-5xl font-bold text-marfil">{t("tv.votingClosed")}</p>
+          <p className="text-2xl text-marfil/60">{t("tv.preparingReveal")}</p>
         </div>
       )}
 
-      {event.status === "revealed" && res && <Podium results={res.results} />}
+      {event.status === "revealed" && res && <Podium results={res.results} t={t} />}
     </Screen>
   );
 }
@@ -97,11 +112,13 @@ function Lobby({
   code,
   joinUrl,
   participants,
+  t,
 }: {
   title: string;
   code: string;
   joinUrl: string;
   participants: { name: string }[];
+  t: T;
 }) {
   const [qr, setQr] = useState("");
   useEffect(() => {
@@ -111,12 +128,13 @@ function Lobby({
   return (
     <div className="flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row lg:justify-between">
       <div className="text-center lg:text-left">
-        <p className="text-2xl uppercase tracking-widest text-dorado">Escanea para unirte</p>
+        <p className="text-2xl uppercase tracking-widest text-dorado">{t("tv.scanToJoin")}</p>
         <h1 className="mt-2 max-w-xl text-6xl font-extrabold leading-tight text-marfil">{title}</h1>
-        <p className="mt-6 text-3xl text-marfil/70">Código</p>
+        <p className="mt-6 text-3xl text-marfil/70">{t("tv.code")}</p>
         <p className="font-mono text-8xl font-bold tracking-[0.2em] text-dorado">{code}</p>
         <p className="mt-8 text-2xl text-marfil/60">
-          {participants.length} {participants.length === 1 ? "persona conectada" : "personas conectadas"}
+          {participants.length}{" "}
+          {participants.length === 1 ? t("tv.personConnected") : t("tv.peopleConnected")}
         </p>
       </div>
 
@@ -149,30 +167,38 @@ function Tasting({
   responses,
   people,
   stats,
+  t,
+  locale,
 }: {
   position: number;
   total: number;
   responses: number;
   people: number;
   stats: LiveStats | null;
+  t: T;
+  locale: Locale;
 }) {
   const pct = people ? Math.round((responses / people) * 100) : 0;
   const R = 130;
   const C = 2 * Math.PI * R;
 
   const rows: { icon: string; text: string }[] = [];
-  if (stats?.mostActive) rows.push({ icon: "🏃", text: `${stats.mostActive.name} va más rápido` });
-  if (stats?.mostGenerous) rows.push({ icon: "🥰", text: `${stats.mostGenerous.name} es el más generoso puntuando` });
+  if (stats?.mostActive) rows.push({ icon: "🏃", text: t("tv.goesFaster", { name: stats.mostActive.name }) });
+  if (stats?.mostGenerous)
+    rows.push({ icon: "🥰", text: t("tv.mostGenerous", { name: stats.mostGenerous.name }) });
   if (stats?.highestPricer)
-    rows.push({ icon: "💸", text: `${stats.highestPricer.name} le pone precios más altos` });
+    rows.push({ icon: "💸", text: t("tv.higherPrices", { name: stats.highestPricer.name }) });
   if (stats?.topAroma)
-    rows.push({ icon: "👃", text: `"${stats.topAroma.aroma}" es el aroma del momento (${stats.topAroma.topName})` });
+    rows.push({
+      icon: "👃",
+      text: t("tv.aromaOfMoment", { aroma: stats.topAroma.aroma, name: stats.topAroma.topName ?? "?" }),
+    });
 
   return (
     <div className="flex w-full max-w-5xl flex-col items-center gap-8">
-      <p className="text-3xl uppercase tracking-widest text-dorado">Catando ahora</p>
+      <p className="text-3xl uppercase tracking-widest text-dorado">{t("tv.tastingNow")}</p>
       <p className="text-9xl font-extrabold text-marfil">
-        Vino {position}
+        {t("host.wineLabel", { n: position })}
         <span className="text-5xl text-marfil/40"> / {total}</span>
       </p>
       <div className="relative flex items-center justify-center">
@@ -193,7 +219,7 @@ function Tasting({
         </svg>
         <div className="absolute flex flex-col items-center">
           <span className="text-7xl font-bold text-marfil">{responses}</span>
-          <span className="text-2xl text-marfil/50">de {people} votos</span>
+          <span className="text-2xl text-marfil/50">{t("tv.votesOf", { n: people })}</span>
         </div>
       </div>
 
@@ -207,23 +233,24 @@ function Tasting({
         </div>
       )}
 
-      <TVTipBanner />
+      <TVTipBanner locale={locale} />
     </div>
   );
 }
 
-function TVTipBanner() {
-  const [tip, setTip] = useState(() => randomTip());
+function TVTipBanner({ locale }: { locale: Locale }) {
+  const [tip, setTip] = useState(() => randomTip(locale));
   useEffect(() => {
-    const id = setInterval(() => setTip((prev) => randomTip(prev)), 12000);
+    setTip(randomTip(locale));
+    const id = setInterval(() => setTip((prev) => randomTip(locale, prev)), 12000);
     return () => clearInterval(id);
-  }, []);
+  }, [locale]);
   return (
     <p className="max-w-3xl text-center text-lg italic text-marfil/40">“{tip}”</p>
   );
 }
 
-function Podium({ results }: { results: EventResults }) {
+function Podium({ results, t }: { results: EventResults; t: T }) {
   const top = results.ranking.slice(0, 3);
   const rest = results.ranking.slice(3);
   const order = [top[1], top[0], top[2]].filter(Boolean); // 2º, 1º, 3º
@@ -233,7 +260,7 @@ function Podium({ results }: { results: EventResults }) {
 
   return (
     <div className="flex w-full max-w-6xl flex-col items-center gap-8">
-      <h1 className="text-6xl font-extrabold text-marfil">🏆 Resultados</h1>
+      <h1 className="text-6xl font-extrabold text-marfil">{t("tv.results")}</h1>
       <div className="flex items-end justify-center gap-6">
         {order.map((s, i) => (
           <div key={s.item.id} className="flex flex-col items-center">

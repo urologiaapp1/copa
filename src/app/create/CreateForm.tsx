@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { createEvent } from "@/lib/actions";
-import { MODALITIES } from "@/lib/modalities";
+import { MODALITIES, getModalityLabel } from "@/lib/modalities";
 import { Button, Card } from "@/components/ui";
+import { useI18n } from "@/lib/i18n/context";
 
 export function CreateForm() {
+  const { t, locale } = useI18n();
   const [doubleBlind, setDoubleBlind] = useState(false);
   const [freePace, setFreePace] = useState(true);
 
@@ -14,19 +16,19 @@ export function CreateForm() {
       <form action={createEvent} className="space-y-5">
         <div>
           <label className="mb-1 block text-sm font-medium text-negro/80">
-            Nombre del evento
+            {t("create.eventName")}
           </label>
           <input
             name="title"
             required
             maxLength={60}
-            placeholder="Cata de tintos del viernes"
+            placeholder={t("create.eventNamePlaceholder")}
             className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-4 py-3 text-negro outline-none focus:border-dorado focus:ring-2 focus:ring-[var(--ring)]"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-negro/80">Modalidad</label>
+          <label className="mb-1 block text-sm font-medium text-negro/80">{t("create.modality")}</label>
           <select
             name="modality"
             defaultValue="tinto"
@@ -34,7 +36,7 @@ export function CreateForm() {
           >
             {MODALITIES.map((m) => (
               <option key={m.key} value={m.key}>
-                {m.emoji} {m.label}
+                {m.emoji} {getModalityLabel(m.key, locale)}
               </option>
             ))}
           </select>
@@ -45,22 +47,22 @@ export function CreateForm() {
           name="doubleBlind"
           checked={doubleBlind}
           onChange={setDoubleBlind}
-          title="Doble ciego"
-          desc="Los vinos van solo numerados. Agregas la info (nombre, cepa, precio) al final, y cada catador recibe su informe de aciertos."
+          title={t("create.doubleBlindTitle")}
+          desc={t("create.doubleBlindDesc")}
         />
         <Toggle
           name="freePace"
           checked={freePace}
           onChange={setFreePace}
-          title="Ritmo libre"
-          desc="Varias botellas a la vez: cada quien evalúa y puede editar cualquier vino cuando quiera. Si lo apagas, tú controlas el vino activo."
+          title={t("create.freePaceTitle")}
+          desc={t("create.freePaceDesc")}
         />
 
         {/* Campos según doble ciego */}
         {doubleBlind ? (
           <div>
             <label className="mb-1 block text-sm font-medium text-negro/80">
-              ¿Cuántos vinos?
+              {t("create.howManyWines")}
             </label>
             <input
               name="wineCount"
@@ -71,15 +73,13 @@ export function CreateForm() {
               required
               className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-4 py-3 text-negro outline-none focus:border-dorado focus:ring-2 focus:ring-[var(--ring)]"
             />
-            <p className="mt-1.5 text-xs text-muted">
-              Se crearán como <b>Vino 1</b> … <b>Vino N</b>. Nadie ve la info hasta que la
-              agregues y reveles.
-            </p>
+            <p className="mt-1.5 text-xs text-muted">{t("create.wineCountHint")}</p>
           </div>
         ) : (
           <div>
             <label className="mb-1 block text-sm font-medium text-negro/80">
-              Muestras <span className="font-normal text-muted">(una por línea)</span>
+              {t("create.samples")}{" "}
+              <span className="font-normal text-muted">{t("create.samplesHintParen")}</span>
             </label>
             <textarea
               name="items"
@@ -90,15 +90,12 @@ export function CreateForm() {
               }
               className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-4 py-3 font-mono text-sm text-negro outline-none focus:border-dorado focus:ring-2 focus:ring-[var(--ring)]"
             />
-            <p className="mt-1.5 text-xs text-muted">
-              Formato opcional: <code>Nombre | Productor | Cepa | Precio</code>. La info queda
-              oculta hasta la revelación.
-            </p>
+            <p className="mt-1.5 text-xs text-muted">{t("create.samplesFormatHint")}</p>
           </div>
         )}
 
         <Button type="submit" variant="gold" size="lg" className="w-full">
-          Crear y generar QR
+          {t("create.submit")}
         </Button>
       </form>
     </Card>

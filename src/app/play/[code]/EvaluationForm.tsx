@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { saveEvaluation, type EvalInput } from "@/lib/actions";
-import { getModality, guessOptions } from "@/lib/modalities";
+import { getModality, getModalityGuessLabel, getModalityAromas, guessOptions } from "@/lib/modalities";
 import { Card } from "@/components/ui";
 import { TipBanner } from "@/components/TipBanner";
+import { useI18n } from "@/lib/i18n/context";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -34,7 +35,9 @@ export function EvaluationForm({
   modalityKey: string;
   initial: Partial<Omit<EvalInput, "itemId">> | null;
 }) {
+  const { t, locale } = useI18n();
   const modality = getModality(modalityKey);
+  const aromaOptions = getModalityAromas(modalityKey, locale);
   const [v, setV] = useState<Omit<EvalInput, "itemId">>({ ...DEFAULT, ...initial });
   const [save, setSave] = useState<SaveState>(initial ? "saved" : "idle");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -78,21 +81,25 @@ export function EvaluationForm({
     }));
   }
 
+  const guesses = guessOptions(modalityKey, locale);
+
   return (
     <div className="space-y-4">
       <Card className="bg-wine border-white/10 p-5">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-marfil/50">
-            <span className="text-base">{modality.emoji}</span> Vino en cata
+            <span className="text-base">{modality.emoji}</span> {t("eval.wineInTasting")}
           </span>
-          <SaveIndicator state={save} />
+          <SaveIndicator state={save} t={t} />
         </div>
-        <p className="mt-1 text-4xl font-extrabold text-dorado">Vino {position}</p>
+        <p className="mt-1 text-4xl font-extrabold text-dorado">
+          {t("host.wineLabel", { n: position })}
+        </p>
 
         {/* Nota general */}
         <div className="mt-6">
           <div className="mb-1 flex items-baseline justify-between">
-            <label className="text-sm font-semibold text-marfil/80">Nota general</label>
+            <label className="text-sm font-semibold text-marfil/80">{t("eval.overallScore")}</label>
             <span className="text-3xl font-bold text-marfil">{v.overall}</span>
           </div>
           <input
@@ -109,17 +116,15 @@ export function EvaluationForm({
       <TipBanner />
 
       <Card className="space-y-4 p-5">
-        <Slider label="Aroma" value={v.aroma} onChange={(n) => set("aroma", n)} />
-        <Slider label="Sabor" value={v.flavor} onChange={(n) => set("flavor", n)} />
-        <Slider label="Equilibrio" value={v.balance} onChange={(n) => set("balance", n)} />
+        <Slider label={t("eval.aroma")} value={v.aroma} onChange={(n) => set("aroma", n)} />
+        <Slider label={t("eval.flavor")} value={v.flavor} onChange={(n) => set("flavor", n)} />
+        <Slider label={t("eval.balance")} value={v.balance} onChange={(n) => set("balance", n)} />
       </Card>
 
       <Card className="p-5">
-        <label className="text-sm font-semibold text-negro">
-          Aromas percibidos
-        </label>
+        <label className="text-sm font-semibold text-negro">{t("eval.perceivedAromas")}</label>
         <div className="mt-3 flex flex-wrap gap-2">
-          {modality.aromas.map((a) => {
+          {aromaOptions.map((a) => {
             const on = v.aromas.includes(a);
             return (
               <button
@@ -143,16 +148,16 @@ export function EvaluationForm({
       <Card className="space-y-4 p-5">
         <div>
           <label className="mb-1 block text-sm font-semibold text-negro">
-            {modality.guessLabel}
+            {getModalityGuessLabel(modalityKey, locale)}
           </label>
-          {guessOptions(modalityKey) ? (
+          {guesses ? (
             <select
               value={v.estimatedGrape}
               onChange={(e) => set("estimatedGrape", e.target.value)}
               className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2.5 text-negro outline-none focus:border-dorado focus:ring-2 focus:ring-[var(--ring)]"
             >
-              <option value="">Elige tu apuesta…</option>
-              {guessOptions(modalityKey)!.map((g) => (
+              <option value="">{t("eval.guessSelectDefault")}</option>
+              {guesses.map((g) => (
                 <option key={g} value={g}>
                   {g}
                 </option>
@@ -163,14 +168,14 @@ export function EvaluationForm({
               value={v.estimatedGrape}
               onChange={(e) => set("estimatedGrape", e.target.value)}
               maxLength={60}
-              placeholder="Tu apuesta…"
+              placeholder={t("eval.guessPlaceholder")}
               className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2.5 text-negro outline-none focus:border-dorado focus:ring-2 focus:ring-[var(--ring)]"
             />
           )}
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-negro">
-            Precio estimado (CLP)
+            {t("eval.estimatedPriceLabel")}
           </label>
           <input
             type="number"
@@ -180,7 +185,7 @@ export function EvaluationForm({
             onChange={(e) =>
               set("estimatedPrice", e.target.value === "" ? null : Number(e.target.value))
             }
-            placeholder="Ej. 9990"
+            placeholder={t("eval.pricePlaceholder")}
             className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2.5 text-negro outline-none focus:border-dorado focus:ring-2 focus:ring-[var(--ring)]"
           />
         </div>
@@ -188,11 +193,11 @@ export function EvaluationForm({
 
       <Card className="space-y-4 p-5">
         <div>
-          <label className="mb-2 block text-sm font-semibold text-negro">¿La comprarías?</label>
+          <label className="mb-2 block text-sm font-semibold text-negro">{t("eval.wouldBuy")}</label>
           <div className="flex gap-2">
             {[
-              { v: true, l: "Sí 👍" },
-              { v: false, l: "No 👎" },
+              { v: true, l: t("eval.buyYes") },
+              { v: false, l: t("eval.buyNo") },
             ].map((o) => (
               <button
                 key={String(o.v)}
@@ -212,13 +217,13 @@ export function EvaluationForm({
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-semibold text-negro">Notas</label>
+          <label className="mb-1 block text-sm font-semibold text-negro">{t("eval.notes")}</label>
           <textarea
             value={v.notes}
             onChange={(e) => set("notes", e.target.value)}
             rows={2}
             maxLength={500}
-            placeholder="Comentario libre…"
+            placeholder={t("eval.notesPlaceholder")}
             className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2.5 text-sm text-negro outline-none focus:border-dorado focus:ring-2 focus:ring-[var(--ring)]"
           />
         </div>
@@ -254,13 +259,19 @@ function Slider({
   );
 }
 
-function SaveIndicator({ state }: { state: SaveState }) {
-  const map: Record<SaveState, { t: string; c: string }> = {
-    idle: { t: "Sin guardar", c: "text-marfil/50" },
-    saving: { t: "Guardando…", c: "text-marfil/50" },
-    saved: { t: "Guardado ✓", c: "text-dorado" },
-    error: { t: "Error al guardar", c: "text-red-400" },
+function SaveIndicator({
+  state,
+  t,
+}: {
+  state: SaveState;
+  t: (key: string) => string;
+}) {
+  const map: Record<SaveState, { key: string; c: string }> = {
+    idle: { key: "common.saveIdle", c: "text-marfil/50" },
+    saving: { key: "common.saving", c: "text-marfil/50" },
+    saved: { key: "common.saved", c: "text-dorado" },
+    error: { key: "common.saveError", c: "text-red-400" },
   };
   const s = map[state];
-  return <span className={`text-xs font-medium ${s.c}`}>{s.t}</span>;
+  return <span className={`text-xs font-medium ${s.c}`}>{t(s.key)}</span>;
 }

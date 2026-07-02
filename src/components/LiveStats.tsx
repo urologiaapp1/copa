@@ -2,6 +2,7 @@
 
 import { useLive } from "@/lib/useLive";
 import { formatCLP } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/context";
 import type { LiveStats as LiveStatsData } from "@/lib/results";
 
 interface Payload {
@@ -11,6 +12,7 @@ interface Payload {
 
 /** Pulso de la sala en vivo: quién puntea, quién apuesta más caro, el aroma del momento. */
 export function LiveStatsPanel({ code, dark = false }: { code: string; dark?: boolean }) {
+  const { t } = useI18n();
   const { data } = useLive<Payload>(`/api/event/${code}/live`, `/api/event/${code}/stream`, 6000);
   const stats = data?.stats;
 
@@ -18,22 +20,26 @@ export function LiveStatsPanel({ code, dark = false }: { code: string; dark?: bo
 
   const items: { icon: string; label: string; value: string }[] = [];
   if (stats.mostActive)
-    items.push({ icon: "🏃", label: "Va más rápido", value: `${stats.mostActive.name} (${stats.mostActive.count})` });
+    items.push({
+      icon: "🏃",
+      label: t("live.goesFaster"),
+      value: `${stats.mostActive.name} (${stats.mostActive.count})`,
+    });
   if (stats.mostGenerous)
-    items.push({ icon: "🥰", label: "Más generoso puntuando", value: stats.mostGenerous.name });
+    items.push({ icon: "🥰", label: t("live.mostGenerous"), value: stats.mostGenerous.name });
   if (stats.toughestCritic && stats.toughestCritic.name !== stats.mostGenerous?.name)
-    items.push({ icon: "🧐", label: "El más exigente", value: stats.toughestCritic.name });
+    items.push({ icon: "🧐", label: t("live.toughestCritic"), value: stats.toughestCritic.name });
   if (stats.highestPricer)
     items.push({
       icon: "💸",
-      label: "Le pone precios más altos",
+      label: t("live.higherPrices"),
       value: `${stats.highestPricer.name} (~${formatCLP(stats.highestPricer.avgPrice)})`,
     });
   if (stats.topAroma)
     items.push({
       icon: "👃",
-      label: "Aroma del momento",
-      value: `"${stats.topAroma.aroma}" — ${stats.topAroma.topName ?? "?"} lo siente más`,
+      label: t("live.aromaOfMoment"),
+      value: t("live.aromaValue", { aroma: stats.topAroma.aroma, name: stats.topAroma.topName ?? "?" }),
     });
 
   if (items.length === 0) return null;
@@ -55,7 +61,7 @@ export function LiveStatsPanel({ code, dark = false }: { code: string; dark?: bo
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-dorado opacity-75" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-dorado" />
         </span>
-        Pulso de la sala
+        {t("live.pulseTitle")}
       </p>
       <div className="space-y-1.5">
         {items.map((it, i) => (

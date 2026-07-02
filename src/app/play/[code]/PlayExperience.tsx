@@ -8,6 +8,8 @@ import { Button, Card } from "@/components/ui";
 import { EvaluationForm } from "./EvaluationForm";
 import { LiveStatsPanel } from "@/components/LiveStats";
 import { TipBanner } from "@/components/TipBanner";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n/context";
 import type { EvalInput } from "@/lib/actions";
 import type { EventStatus } from "@/lib/types";
 
@@ -44,13 +46,14 @@ export function PlayExperience({
   modality: string;
   name: string;
 }) {
+  const { t } = useI18n();
   const { data } = useLive<StateData>(
     `/api/event/${code}/state`,
     `/api/event/${code}/stream`,
   );
   const [openItem, setOpenItem] = useState<string | null>(null);
 
-  if (!data) return <Center>Cargando…</Center>;
+  if (!data) return <Center>{t("common.loading")}</Center>;
 
   const { event } = data;
   const mod = getModality(modality);
@@ -61,13 +64,11 @@ export function PlayExperience({
       <main className="bg-wine flex min-h-dvh items-center justify-center px-5">
         <Card className="max-w-sm p-8 text-center">
           <div className="text-4xl">👋</div>
-          <p className="mt-2 text-lg font-bold text-negro">Ya no estás en esta cata</p>
-          <p className="mt-1 text-sm text-muted">
-            El anfitrión te quitó de la lista. Si es un error, vuelve a unirte.
-          </p>
+          <p className="mt-2 text-lg font-bold text-negro">{t("play.removedTitle")}</p>
+          <p className="mt-1 text-sm text-muted">{t("play.removedDesc")}</p>
           <Link href={`/join/${code}`} className="mt-4 block">
             <Button variant="gold" className="w-full">
-              Volver a unirme
+              {t("play.rejoin")}
             </Button>
           </Link>
         </Card>
@@ -82,22 +83,25 @@ export function PlayExperience({
           <div>
             <p className="text-xs text-marfil/50">{event.title}</p>
             <p className="text-sm font-semibold text-marfil">
-              {mod.emoji} Hola, {name}
+              {mod.emoji} {t("play.hello", { name })}
             </p>
           </div>
-          {event.status === "tasting" && (
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-marfil/80">
-              {data.myEvaluatedCount}/{event.itemCount} listos
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {event.status === "tasting" && (
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-marfil/80">
+                {t("play.readyOf", { done: data.myEvaluatedCount, total: event.itemCount })}
+              </span>
+            )}
+            <LanguageSwitcher dark />
+          </div>
         </header>
 
         {event.status === "lobby" && (
           <div className="space-y-4">
             <Waiting
-              title="Esperando al anfitrión"
-              subtitle="La cata comenzará en breve. No cierres esta pantalla."
-              extra={`${data.participants.length} personas conectadas`}
+              title={t("play.waitingHostTitle")}
+              subtitle={t("play.waitingHostSubtitle")}
+              extra={t("play.peopleConnected", { count: data.participants.length })}
             />
             <TipBanner />
           </div>
@@ -111,7 +115,7 @@ export function PlayExperience({
                 onClick={() => setOpenItem(null)}
                 className="mb-3 text-sm text-marfil/70 hover:text-marfil"
               >
-                ← Volver a la lista
+                {t("play.backToList")}
               </button>
               <EvaluationForm
                 code={code}
@@ -124,10 +128,7 @@ export function PlayExperience({
           ) : (
             <div className="space-y-3">
               <LiveStatsPanel code={code} dark />
-              <p className="text-sm text-marfil/70">
-                Evalúa los vinos en el orden que quieras. Puedes volver y cambiar tu nota cuando
-                quieras.
-              </p>
+              <p className="text-sm text-marfil/70">{t("play.freePaceHint")}</p>
               <div className="space-y-2">
                 {data.items.map((it) => {
                   const done = data.myEvalsById[it.id];
@@ -137,17 +138,19 @@ export function PlayExperience({
                       onClick={() => setOpenItem(it.id)}
                       className="flex w-full items-center justify-between rounded-[var(--radius)] border border-[var(--border)] bg-card px-4 py-3 text-left transition-colors hover:border-dorado"
                     >
-                      <span className="font-semibold text-negro">Vino {it.position}</span>
+                      <span className="font-semibold text-negro">
+                        {t("host.wineLabel", { n: it.position })}
+                      </span>
                       {done ? (
                         <span className="flex items-center gap-2 text-sm font-medium text-green-700">
                           {done.overall} pts
                           <span className="rounded-full bg-green-600 px-2 py-0.5 text-xs text-white">
-                            ✓ editar
+                            {t("play.edit")}
                           </span>
                         </span>
                       ) : (
                         <span className="rounded-full bg-burdeo px-2.5 py-0.5 text-xs font-medium text-marfil">
-                          evaluar
+                          {t("play.evaluate")}
                         </span>
                       )}
                     </button>
@@ -175,9 +178,9 @@ export function PlayExperience({
         {event.status === "closed" && (
           <div className="space-y-4">
             <Waiting
-              title="Votación cerrada"
-              subtitle="Gracias por participar. Espera la gran revelación del anfitrión."
-              extra={`Completaste ${data.myEvaluatedCount} de ${event.itemCount} vinos`}
+              title={t("play.votingClosedTitle")}
+              subtitle={t("play.votingClosedSubtitle")}
+              extra={t("play.completedOf", { done: data.myEvaluatedCount, total: event.itemCount })}
             />
             <LiveStatsPanel code={code} />
             <TipBanner />
@@ -187,13 +190,11 @@ export function PlayExperience({
         {event.status === "revealed" && (
           <Card className="p-6 text-center">
             <div className="text-4xl">🎉</div>
-            <p className="mt-2 text-lg font-bold text-negro">¡Resultados listos!</p>
-            <p className="mt-1 text-sm text-muted">
-              Descubre el ranking y tu informe de aciertos.
-            </p>
+            <p className="mt-2 text-lg font-bold text-negro">{t("play.resultsReadyTitle")}</p>
+            <p className="mt-1 text-sm text-muted">{t("play.resultsReadyDesc")}</p>
             <Link href={`/results/${code}`} className="mt-4 block">
               <Button variant="gold" size="lg" className="w-full">
-                Ver resultados
+                {t("play.viewResults")}
               </Button>
             </Link>
           </Card>

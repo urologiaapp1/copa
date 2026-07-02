@@ -5,11 +5,13 @@ import Link from "next/link";
 import { QRShare } from "@/components/QRShare";
 import { Confetti } from "@/components/Confetti";
 import { Button, Card, Badge } from "@/components/ui";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLive } from "@/lib/useLive";
 import { hostRemoveParticipant, hostSetIndex, hostSetStatus, hostUpdateItem } from "@/lib/actions";
-import { getModality, CHILEAN_RED_GRAPES } from "@/lib/modalities";
+import { getModality, getModalityLabel, CHILEAN_RED_GRAPES } from "@/lib/modalities";
 import { formatCLP } from "@/lib/utils";
 import { LiveStatsPanel } from "@/components/LiveStats";
+import { useI18n } from "@/lib/i18n/context";
 import type { EventResults } from "@/lib/results";
 import type { EventStatus } from "@/lib/types";
 
@@ -40,6 +42,7 @@ interface HostData {
 }
 
 export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string }) {
+  const { t, locale } = useI18n();
   const { data, error } = useLive<HostData>(
     `/api/event/${code}/host`,
     `/api/event/${code}/stream`,
@@ -47,8 +50,8 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
   const [busy, setBusy] = useState(false);
 
   if (error === "unauthorized")
-    return <Center>No autorizado.</Center>;
-  if (!data) return <Center>Cargando panel…</Center>;
+    return <Center>{t("common.unauthorized")}</Center>;
+  if (!data) return <Center>{t("common.loadingPanel")}</Center>;
 
   const { event, participants, perItemResponses, results } = data;
   const modality = getModality(event.modality);
@@ -63,7 +66,7 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
   }
 
   async function removeParticipant(id: string, name: string) {
-    if (!confirm(`¿Eliminar a ${name} de la cata?`)) return;
+    if (!confirm(t("host.removeConfirm", { name }))) return;
     await run(async () => {
       await hostRemoveParticipant(code, id);
     });
@@ -80,18 +83,20 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
             </Link>
             <h1 className="text-2xl font-bold text-marfil">{event.title}</h1>
             <p className="text-sm text-marfil/60">
-              {modality.emoji} {modality.label} · {event.itemCount} muestras
+              {modality.emoji} {getModalityLabel(event.modality, locale)} ·{" "}
+              {t("host.wineCount", { count: event.itemCount })}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <StatusPill status={event.status} />
+            <StatusPill status={event.status} t={t} />
+            <LanguageSwitcher dark />
             <a
               href={`/tv/${code}`}
               target="_blank"
               rel="noopener"
               className="rounded-full border border-white/15 px-3 py-1 text-xs text-marfil/70 hover:bg-white/10"
             >
-              📺 Modo TV
+              {t("host.tvMode")}
             </a>
           </div>
         </header>
@@ -103,11 +108,11 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
               <QRShare url={joinUrl} code={event.code} />
             </Card>
 
-            <SosCard recoveryCode={event.recoveryCode} />
+            <SosCard recoveryCode={event.recoveryCode} t={t} />
 
-            <ModeBadges doubleBlind={event.doubleBlind} freePace={event.freePace} />
+            <ModeBadges doubleBlind={event.doubleBlind} freePace={event.freePace} t={t} />
 
-            <ParticipantsCard participants={participants} onRemove={removeParticipant} busy={busy} />
+            <ParticipantsCard participants={participants} onRemove={removeParticipant} busy={busy} t={t} />
 
             <Button
               variant="gold"
@@ -116,7 +121,7 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
               disabled={busy || participants.length === 0}
               onClick={() => run(() => hostSetStatus(code, "tasting"))}
             >
-              {participants.length === 0 ? "Esperando participantes…" : "Iniciar cata"}
+              {participants.length === 0 ? t("host.waitingParticipants") : t("host.startTasting")}
             </Button>
           </div>
         )}
@@ -127,35 +132,30 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
             {event.freePace ? (
               <Card className="p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-negro">Ritmo libre</p>
-                  <Badge>{event.itemCount} vinos abiertos</Badge>
+                  <p className="text-sm font-semibold text-negro">{t("host.freePaceTitle")}</p>
+                  <Badge>{t("host.winesOpen", { count: event.itemCount })}</Badge>
                 </div>
-                <p className="mt-1 text-xs text-muted">
-                  Cada catador evalúa y edita los vinos que quiera, en cualquier orden. Cierra la
-                  votación cuando estén listos.
-                </p>
+                <p className="mt-1 text-xs text-muted">{t("host.freePaceHostDesc")}</p>
               </Card>
             ) : (
               <Card className="p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted">Muestra activa</p>
+                  <p className="text-sm text-muted">{t("host.activeWine")}</p>
                   <Badge>
                     {event.currentIndex + 1} / {event.itemCount}
                   </Badge>
                 </div>
                 <p className="mt-1 text-3xl font-bold text-burdeo">
-                  Muestra {event.currentIndex + 1}
+                  {t("host.wineLabel", { n: event.currentIndex + 1 })}
                 </p>
-                <p className="mt-1 text-xs text-muted">
-                  Los participantes puntúan sin ver el nombre real.
-                </p>
+                <p className="mt-1 text-xs text-muted">{t("host.blindVoting")}</p>
                 <div className="mt-4 flex items-center gap-3">
                   <Button
                     variant="outline"
                     disabled={busy || event.currentIndex === 0}
                     onClick={() => run(() => hostSetIndex(code, event.currentIndex - 1))}
                   >
-                    ← Anterior
+                    {t("host.prev")}
                   </Button>
                   <Button
                     variant="primary"
@@ -163,7 +163,7 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
                     disabled={busy || event.currentIndex >= event.itemCount - 1}
                     onClick={() => run(() => hostSetIndex(code, event.currentIndex + 1))}
                   >
-                    Siguiente muestra →
+                    {t("host.nextWine")}
                   </Button>
                 </div>
               </Card>
@@ -172,11 +172,11 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
             <LiveStatsPanel code={code} />
 
             {event.doubleBlind && (
-              <ItemEditor code={code} items={data.items} modalityKey={event.modality} />
+              <ItemEditor code={code} items={data.items} modalityKey={event.modality} t={t} />
             )}
 
             <Card className="p-5">
-              <p className="mb-3 text-sm font-semibold text-negro">Respuestas por vino</p>
+              <p className="mb-3 text-sm font-semibold text-negro">{t("host.responsesPerWine")}</p>
               <div className="space-y-2">
                 {perItemResponses.map((r) => (
                   <div key={r.itemId} className="flex items-center gap-3">
@@ -197,7 +197,13 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
               </div>
             </Card>
 
-            <ParticipantsCard participants={participants} onRemove={removeParticipant} busy={busy} canJoin />
+            <ParticipantsCard
+              participants={participants}
+              onRemove={removeParticipant}
+              busy={busy}
+              canJoin
+              t={t}
+            />
 
             <Button
               variant="gold"
@@ -206,7 +212,7 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
               disabled={busy}
               onClick={() => run(() => hostSetStatus(code, "closed"))}
             >
-              Cerrar votación
+              {t("host.closeVoting")}
             </Button>
           </div>
         )}
@@ -215,15 +221,16 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
         {event.status === "closed" && (
           <div className="space-y-5">
             <Card className="p-6 text-center">
-              <p className="text-lg font-semibold text-negro">Votación cerrada</p>
+              <p className="text-lg font-semibold text-negro">{t("host.votingClosedTitle")}</p>
               <p className="mt-1 text-sm text-muted">
-                {results.responded} de {participants.length} participaron ·{" "}
-                {results.totalEvaluations} evaluaciones
+                {t("host.participatedOf", {
+                  responded: results.responded,
+                  total: participants.length,
+                  evals: results.totalEvaluations,
+                })}
               </p>
               <p className="mt-4 text-sm text-muted">
-                {event.doubleBlind
-                  ? "Completa la info de cada vino y luego revela para enviar los informes de aciertos."
-                  : "Cuando estén todos listos, revela los resultados."}
+                {event.doubleBlind ? t("host.doubleBlindCloseHint") : t("host.readyToReveal")}
               </p>
               <Button
                 variant="gold"
@@ -232,7 +239,7 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
                 disabled={busy}
                 onClick={() => run(() => hostSetStatus(code, "revealed"))}
               >
-                🎉 Revelar resultados
+                {t("host.revealButton")}
               </Button>
               <Button
                 variant="ghost"
@@ -241,12 +248,12 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
                 disabled={busy}
                 onClick={() => run(() => hostSetStatus(code, "tasting"))}
               >
-                Reabrir votación
+                {t("host.reopenVoting")}
               </Button>
             </Card>
 
             {event.doubleBlind && (
-              <ItemEditor code={code} items={data.items} modalityKey={event.modality} />
+              <ItemEditor code={code} items={data.items} modalityKey={event.modality} t={t} />
             )}
           </div>
         )}
@@ -254,34 +261,34 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
         {/* REVEALED */}
         {event.status === "revealed" && (
           <div className="space-y-5">
-            <RankingCard results={results} showNames />
+            <RankingCard results={results} showNames t={t} />
             <div className="grid gap-3 sm:grid-cols-3">
-              <HighlightCard title="🏆 Ganador" stat={results.ranking[0]} metric="nota" />
-              <HighlightCard title="💎 Mejor precio/calidad" stat={results.bestValue} metric="valor" />
-              <HighlightCard title="⚡ Más divisivo" stat={results.mostDivisive} metric="dispersión" />
+              <HighlightCard title={t("host.winner")} stat={results.ranking[0]} metric="nota" />
+              <HighlightCard title={t("host.bestValue")} stat={results.bestValue} metric="valor" />
+              <HighlightCard title={t("host.mostDivisive")} stat={results.mostDivisive} metric="dispersión" />
             </div>
             <Link href={`/results/${code}`}>
               <Button variant="outline" className="w-full">
-                Ver resultados completos
+                {t("host.viewFullResults")}
               </Button>
             </Link>
 
             <Card className="p-5">
-              <p className="mb-3 text-sm font-semibold text-negro">Exportar</p>
+              <p className="mb-3 text-sm font-semibold text-negro">{t("host.export")}</p>
               <div className="grid gap-2 sm:grid-cols-3">
                 <a href={`/api/event/${code}/export?format=summary`} download>
                   <Button variant="outline" size="sm" className="w-full">
-                    📊 Resumen (Excel)
+                    {t("host.exportSummary")}
                   </Button>
                 </a>
                 <a href={`/api/event/${code}/export?format=raw`} download>
                   <Button variant="outline" size="sm" className="w-full">
-                    📋 Datos (Excel)
+                    {t("host.exportRaw")}
                   </Button>
                 </a>
                 <a href={`/results/${code}?print=1`} target="_blank" rel="noopener">
                   <Button variant="outline" size="sm" className="w-full">
-                    🖨️ PDF
+                    {t("host.exportPdf")}
                   </Button>
                 </a>
               </div>
@@ -293,12 +300,14 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
   );
 }
 
-function StatusPill({ status }: { status: EventStatus }) {
+type T = (key: string, vars?: Record<string, string | number>) => string;
+
+function StatusPill({ status, t }: { status: EventStatus; t: T }) {
   const map: Record<EventStatus, string> = {
-    lobby: "En sala de espera",
-    tasting: "Cata en curso",
-    closed: "Votación cerrada",
-    revealed: "Resultados revelados",
+    lobby: t("host.statusLobby"),
+    tasting: t("host.statusTasting"),
+    closed: t("host.statusClosed"),
+    revealed: t("host.statusRevealed"),
   };
   return (
     <span className="rounded-full border border-dorado/40 bg-dorado/10 px-3 py-1 text-xs font-medium text-dorado">
@@ -312,24 +321,22 @@ function ParticipantsCard({
   onRemove,
   busy,
   canJoin,
+  t,
 }: {
   participants: { id: string; name: string }[];
   onRemove?: (id: string, name: string) => void;
   busy?: boolean;
   canJoin?: boolean;
+  t: T;
 }) {
   return (
     <Card className="p-5">
       <p className="mb-1 text-sm font-semibold text-negro">
-        Catadores <span className="text-muted">({participants.length})</span>
+        {t("host.tasters")} <span className="text-muted">({participants.length})</span>
       </p>
-      {canJoin && (
-        <p className="mb-3 text-xs text-muted">
-          Los que lleguen tarde pueden unirse escaneando el QR mientras la cata siga abierta.
-        </p>
-      )}
+      {canJoin && <p className="mb-3 text-xs text-muted">{t("host.lateJoinHint")}</p>}
       {participants.length === 0 ? (
-        <p className="text-sm text-muted">Aún no se une nadie. Comparte el QR.</p>
+        <p className="text-sm text-muted">{t("host.noOneYet")}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {participants.map((p) => (
@@ -343,7 +350,7 @@ function ParticipantsCard({
                   type="button"
                   disabled={busy}
                   onClick={() => onRemove(p.id, p.name)}
-                  aria-label={`Eliminar ${p.name}`}
+                  aria-label={t("host.removeAria", { name: p.name })}
                   className="flex h-5 w-5 items-center justify-center rounded-full text-burdeo/60 hover:bg-burdeo hover:text-marfil disabled:opacity-40"
                 >
                   ×
@@ -357,14 +364,11 @@ function ParticipantsCard({
   );
 }
 
-function SosCard({ recoveryCode }: { recoveryCode: string }) {
+function SosCard({ recoveryCode, t }: { recoveryCode: string; t: T }) {
   return (
     <Card className="border-dorado/40 bg-dorado/10 p-5">
-      <p className="text-sm font-semibold text-burdeo">🆘 Tu código SOS de administrador</p>
-      <p className="mt-1 text-xs text-negro/70">
-        Guárdalo. Si pierdes el acceso (cambias de teléfono o se borra tu sesión), entra a{" "}
-        <b>/recover</b> con el código del evento y este código para retomar el control.
-      </p>
+      <p className="text-sm font-semibold text-burdeo">{t("host.sosTitle")}</p>
+      <p className="mt-1 text-xs text-negro/70">{t("host.sosDesc")}</p>
       <p className="mt-3 select-all rounded-lg bg-white px-4 py-2 text-center font-mono text-2xl font-bold tracking-[0.25em] text-burdeo">
         {recoveryCode || "—"}
       </p>
@@ -372,12 +376,12 @@ function SosCard({ recoveryCode }: { recoveryCode: string }) {
   );
 }
 
-function ModeBadges({ doubleBlind, freePace }: { doubleBlind: boolean; freePace: boolean }) {
+function ModeBadges({ doubleBlind, freePace, t }: { doubleBlind: boolean; freePace: boolean; t: T }) {
   if (!doubleBlind && !freePace) return null;
   return (
     <div className="flex flex-wrap gap-2">
-      {doubleBlind && <Badge>👁️ Doble ciego</Badge>}
-      {freePace && <Badge>🎯 Ritmo libre</Badge>}
+      {doubleBlind && <Badge>{t("host.doubleBlindBadge")}</Badge>}
+      {freePace && <Badge>{t("host.freePaceBadge")}</Badge>}
     </div>
   );
 }
@@ -386,20 +390,20 @@ function ItemEditor({
   code,
   items,
   modalityKey,
+  t,
 }: {
   code: string;
   items: HostItem[];
   modalityKey: string;
+  t: T;
 }) {
   return (
     <Card className="p-5">
-      <p className="mb-1 text-sm font-semibold text-negro">Info de los vinos</p>
-      <p className="mb-3 text-xs text-muted">
-        Agrega o corrige la información de cada vino. Se revela junto con los resultados.
-      </p>
+      <p className="mb-1 text-sm font-semibold text-negro">{t("host.itemEditorTitle")}</p>
+      <p className="mb-3 text-xs text-muted">{t("host.itemEditorDesc")}</p>
       <div className="space-y-3">
         {items.map((it) => (
-          <ItemRow key={it.id} code={code} item={it} modalityKey={modalityKey} />
+          <ItemRow key={it.id} code={code} item={it} modalityKey={modalityKey} t={t} />
         ))}
       </div>
     </Card>
@@ -410,10 +414,12 @@ function ItemRow({
   code,
   item,
   modalityKey,
+  t,
 }: {
   code: string;
   item: HostItem;
   modalityKey: string;
+  t: T;
 }) {
   const [name, setName] = useState(item.name);
   const [producer, setProducer] = useState(item.producer ?? "");
@@ -440,22 +446,32 @@ function ItemRow({
   return (
     <div className="rounded-xl border border-[var(--border)] p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold text-burdeo">Vino {item.position}</span>
+        <span className="text-xs font-semibold text-burdeo">{t("host.wineLabel", { n: item.position })}</span>
         <button
           type="button"
           onClick={save}
           disabled={state === "saving"}
           className="rounded-full bg-burdeo px-3 py-1 text-xs font-medium text-marfil disabled:opacity-50"
         >
-          {state === "saving" ? "Guardando…" : state === "saved" ? "Guardado ✓" : "Guardar"}
+          {state === "saving" ? t("common.saving") : state === "saved" ? t("common.saved") : t("common.save")}
         </button>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <input className={input + " col-span-2"} placeholder="Nombre del vino" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className={input} placeholder="Productor / viña" value={producer} onChange={(e) => setProducer(e.target.value)} />
+        <input
+          className={input + " col-span-2"}
+          placeholder={t("host.namePlaceholder")}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          className={input}
+          placeholder={t("host.producerPlaceholder")}
+          value={producer}
+          onChange={(e) => setProducer(e.target.value)}
+        />
         {isTinto ? (
           <select className={input} value={grape} onChange={(e) => setGrape(e.target.value)}>
-            <option value="">Cepa…</option>
+            <option value="">{t("host.grapeSelectDefault")}</option>
             {CHILEAN_RED_GRAPES.map((g) => (
               <option key={g} value={g}>
                 {g}
@@ -463,18 +479,30 @@ function ItemRow({
             ))}
           </select>
         ) : (
-          <input className={input} placeholder="Cepa / tipo" value={grape} onChange={(e) => setGrape(e.target.value)} />
+          <input
+            className={input}
+            placeholder={t("host.grapePlaceholder")}
+            value={grape}
+            onChange={(e) => setGrape(e.target.value)}
+          />
         )}
-        <input className={input + " col-span-2"} type="number" inputMode="numeric" placeholder="Precio (CLP)" value={price} onChange={(e) => setPrice(e.target.value)} />
+        <input
+          className={input + " col-span-2"}
+          type="number"
+          inputMode="numeric"
+          placeholder={t("host.pricePlaceholder")}
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+        />
       </div>
     </div>
   );
 }
 
-function RankingCard({ results, showNames }: { results: EventResults; showNames?: boolean }) {
+function RankingCard({ results, showNames, t }: { results: EventResults; showNames?: boolean; t: T }) {
   return (
     <Card className="p-5">
-      <p className="mb-3 text-sm font-semibold text-negro">Ranking</p>
+      <p className="mb-3 text-sm font-semibold text-negro">{t("host.ranking")}</p>
       <div className="space-y-2">
         {results.ranking.map((s, i) => (
           <div key={s.item.id} className="flex items-center gap-3">
@@ -483,7 +511,7 @@ function RankingCard({ results, showNames }: { results: EventResults; showNames?
             </span>
             <div className="flex-1">
               <p className="text-sm font-medium text-negro">
-                {showNames ? s.item.name : `Muestra ${s.item.position}`}
+                {showNames ? s.item.name : t("host.wineLabel", { n: s.item.position })}
               </p>
               {showNames && (s.item.producer || s.item.price) && (
                 <p className="text-xs text-muted">
@@ -495,7 +523,7 @@ function RankingCard({ results, showNames }: { results: EventResults; showNames?
             </div>
             <div className="text-right">
               <p className="font-bold text-burdeo">{s.avgOverall.toFixed(0)}</p>
-              <p className="text-[10px] text-muted">{s.count} votos</p>
+              <p className="text-[10px] text-muted">{t("host.votesCount", { count: s.count })}</p>
             </div>
           </div>
         ))}

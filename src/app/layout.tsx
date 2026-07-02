@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { LocaleProvider } from "@/lib/i18n/context";
+import { getInitialLocale } from "@/lib/i18n/server";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -24,12 +26,15 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const initialLocale = await getInitialLocale();
   return (
-    <html lang="es" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang={initialLocale} className={`${inter.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">
+        <LocaleProvider initialLocale={initialLocale}>{children}</LocaleProvider>
+      </body>
     </html>
   );
 }

@@ -5,8 +5,12 @@ import Link from "next/link";
 import { useLive } from "@/lib/useLive";
 import { Button, Card } from "@/components/ui";
 import { Confetti } from "@/components/Confetti";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { formatCLP } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/context";
 import type { EventResults, TasterProfile, TasterLeaderboard } from "@/lib/results";
+
+type T = (key: string, vars?: Record<string, string | number>) => string;
 
 interface Payload {
   event: { code: string; title: string; modality: string; status: string };
@@ -16,6 +20,7 @@ interface Payload {
 }
 
 export function ResultsView({ code, print = false }: { code: string; print?: boolean }) {
+  const { t } = useI18n();
   const { data, error } = useLive<Payload>(
     `/api/event/${code}/results`,
     `/api/event/${code}/stream`,
@@ -25,8 +30,8 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
   useEffect(() => {
     if (print && data && !printed.current) {
       printed.current = true;
-      const t = setTimeout(() => window.print(), 500);
-      return () => clearTimeout(t);
+      const timeout = setTimeout(() => window.print(), 500);
+      return () => clearTimeout(timeout);
     }
   }, [print, data]);
 
@@ -35,12 +40,12 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
       <Center>
         <Card className="max-w-sm p-8 text-center">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-dorado/30 border-t-dorado" />
-          <p className="font-semibold text-negro">Aún no se revelan los resultados</p>
-          <p className="mt-1 text-sm text-muted">El anfitrión los revelará pronto.</p>
+          <p className="font-semibold text-negro">{t("results.notRevealedTitle")}</p>
+          <p className="mt-1 text-sm text-muted">{t("results.notRevealedDesc")}</p>
         </Card>
       </Center>
     );
-  if (!data) return <Center>Cargando resultados…</Center>;
+  if (!data) return <Center>{t("common.loadingResults")}</Center>;
 
   const { results, profile, leaderboard } = data;
 
@@ -48,26 +53,36 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
     <main className="bg-wine min-h-dvh px-5 py-8 print:bg-white print:py-2">
       {!print && <Confetti />}
       <div className="mx-auto w-full max-w-2xl space-y-5">
+        {!print && (
+          <div className="flex justify-end print:hidden">
+            <LanguageSwitcher dark />
+          </div>
+        )}
         <header className="text-center">
-          <p className="text-xs uppercase tracking-widest text-dorado">Resultados</p>
+          <p className="text-xs uppercase tracking-widest text-dorado">{t("results.title")}</p>
           <h1 className="text-2xl font-bold text-marfil print:text-negro">{data.event.title}</h1>
           <p className="mt-1 text-sm text-marfil/60 print:text-negro/60">
-            {results.responded} participaron · {results.totalEvaluations} evaluaciones
+            {t("results.participatedEvals", {
+              responded: results.responded,
+              evals: results.totalEvaluations,
+            })}
           </p>
         </header>
 
         {/* Podio */}
         <div className="grid gap-3 sm:grid-cols-3">
-          <Highlight title="🏆 Ganador" name={results.ranking[0]?.item.name} sub={
-            results.ranking[0] ? `${results.ranking[0].avgOverall.toFixed(0)} pts` : undefined
-          } />
           <Highlight
-            title="💎 Precio/calidad"
+            title={t("results.winner")}
+            name={results.ranking[0]?.item.name}
+            sub={results.ranking[0] ? `${results.ranking[0].avgOverall.toFixed(0)} pts` : undefined}
+          />
+          <Highlight
+            title={t("results.priceQuality")}
             name={results.bestValue?.item.name}
             sub={results.bestValue?.item.price ? formatCLP(results.bestValue.item.price) : undefined}
           />
           <Highlight
-            title="⚡ Más divisivo"
+            title={t("results.mostDivisive")}
             name={results.mostDivisive?.item.name}
             sub={results.mostDivisive ? `±${results.mostDivisive.stdDev.toFixed(1)}` : undefined}
           />
@@ -76,17 +91,19 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
         {results.surprise && (
           <Card className="border-dorado/40 bg-dorado/10 p-4">
             <p className="text-sm">
-              <span className="font-semibold text-burdeo">🎈 Sorpresa de la noche:</span>{" "}
-              <span className="text-negro">{results.surprise.item.name}</span> obtuvo{" "}
-              {results.surprise.avgOverall.toFixed(0)} pts siendo de las más económicas
-              {results.surprise.item.price ? ` (${formatCLP(results.surprise.item.price)})` : ""}.
+              <span className="font-semibold text-burdeo">{t("results.surpriseLabel")}</span>{" "}
+              <span className="text-negro">{results.surprise.item.name}</span>{" "}
+              {t("results.surpriseObtained", {
+                score: results.surprise.avgOverall.toFixed(0),
+                price: results.surprise.item.price ? ` (${formatCLP(results.surprise.item.price)})` : "",
+              })}
             </p>
           </Card>
         )}
 
         {/* Ranking completo */}
         <Card className="p-5">
-          <p className="mb-3 text-sm font-semibold text-negro">Ranking completo</p>
+          <p className="mb-3 text-sm font-semibold text-negro">{t("results.fullRanking")}</p>
           <div className="space-y-3">
             {results.ranking.map((s, i) => (
               <div key={s.item.id}>
@@ -100,7 +117,9 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
                       {s.item.grape ? s.item.grape : ""}
                       {s.item.grape && s.item.price ? " · " : ""}
                       {s.item.price ? formatCLP(s.item.price) : ""}
-                      {s.wouldBuyPct > 0 ? ` · ${s.wouldBuyPct.toFixed(0)}% compraría` : ""}
+                      {s.wouldBuyPct > 0
+                        ? ` · ${t("results.wouldBuyPct", { pct: s.wouldBuyPct.toFixed(0) })}`
+                        : ""}
                     </p>
                   </div>
                   <span className="font-bold text-burdeo">{s.avgOverall.toFixed(0)}</span>
@@ -117,14 +136,14 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
         </Card>
 
         {/* Ranking de catadores */}
-        {leaderboard.rows.length > 0 && <TasterLeaderboardCard leaderboard={leaderboard} />}
+        {leaderboard.rows.length > 0 && <TasterLeaderboardCard leaderboard={leaderboard} t={t} />}
 
         {/* Perfil del catador */}
-        {profile && profile.evaluated > 0 && <ProfileCard profile={profile} />}
+        {profile && profile.evaluated > 0 && <ProfileCard profile={profile} t={t} />}
 
         <Link href="/" className="block print:hidden">
           <Button variant="outline" className="w-full">
-            Crear otra cata
+            {t("results.createAnother")}
           </Button>
         </Link>
       </div>
@@ -132,41 +151,41 @@ export function ResultsView({ code, print = false }: { code: string; print?: boo
   );
 }
 
-function ProfileCard({ profile }: { profile: TasterProfile }) {
+function ProfileCard({ profile, t }: { profile: TasterProfile; t: T }) {
   const gen = profile.generosityVsGroup;
   return (
     <Card className="p-5">
-      <p className="mb-1 text-sm font-semibold text-negro">Tu perfil de catador</p>
+      <p className="mb-1 text-sm font-semibold text-negro">{t("results.yourProfile")}</p>
       <p className="mb-4 text-xs text-muted">{profile.name}</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Muestras" value={String(profile.evaluated)} />
-        <Stat label="Nota media" value={profile.avgGiven.toFixed(0)} />
+        <Stat label={t("results.winesStat")} value={String(profile.evaluated)} />
+        <Stat label={t("results.avgScore")} value={profile.avgGiven.toFixed(0)} />
         <Stat
-          label="Vs. grupo"
+          label={t("results.vsGroup")}
           value={`${gen >= 0 ? "+" : ""}${gen.toFixed(0)}`}
-          hint={gen >= 3 ? "Generoso" : gen <= -3 ? "Exigente" : "Equilibrado"}
+          hint={gen >= 3 ? t("results.generous") : gen <= -3 ? t("results.demanding") : t("results.balanced")}
         />
         <Stat
-          label="Precisión precio"
+          label={t("results.priceAccuracyStat")}
           value={profile.priceAccuracy != null ? `${profile.priceAccuracy}%` : "—"}
         />
       </div>
       <div className="mt-4 grid grid-cols-3 gap-3">
-        <RadarBar label="Aroma" value={profile.radar.aroma} />
-        <RadarBar label="Sabor" value={profile.radar.flavor} />
-        <RadarBar label="Equilibrio" value={profile.radar.balance} />
+        <RadarBar label={t("eval.aroma")} value={profile.radar.aroma} />
+        <RadarBar label={t("eval.flavor")} value={profile.radar.flavor} />
+        <RadarBar label={t("eval.balance")} value={profile.radar.balance} />
       </div>
 
       {profile.grapeGuesses > 0 && (
         <p className="mt-4 rounded-lg bg-burdeo/10 px-3 py-2 text-center text-sm font-medium text-burdeo">
-          🎯 Acertaste {profile.grapeHits} de {profile.grapeGuesses} cepas
+          {t("results.grapeHitsInline", { hits: profile.grapeHits, total: profile.grapeGuesses })}
         </p>
       )}
 
       {profile.report.some((r) => r.myGuess || r.myPrice != null) && (
         <div className="mt-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-            Tu informe de aciertos
+            {t("results.yourReport")}
           </p>
           <div className="space-y-1.5">
             {profile.report.map((r) => (
@@ -180,11 +199,11 @@ function ProfileCard({ profile }: { profile: TasterProfile }) {
                 <span className="text-muted">
                   {r.myGuess ? (
                     <>
-                      dijiste <b className="text-negro">{r.myGuess}</b>
-                      {r.realGrape ? ` · era ${r.realGrape}` : ""}
+                      {t("results.youSaid")} <b className="text-negro">{r.myGuess}</b>
+                      {r.realGrape ? ` · ${t("results.itWas")} ${r.realGrape}` : ""}
                     </>
                   ) : (
-                    "sin apuesta de cepa"
+                    t("results.noGrapeGuess")
                   )}
                 </span>
                 {r.grapeHit === true && <span className="text-green-700">✓</span>}
@@ -198,7 +217,7 @@ function ProfileCard({ profile }: { profile: TasterProfile }) {
   );
 }
 
-function TasterLeaderboardCard({ leaderboard }: { leaderboard: TasterLeaderboard }) {
+function TasterLeaderboardCard({ leaderboard, t }: { leaderboard: TasterLeaderboard; t: T }) {
   const { rows, bestPriceGuesser, bestGrapeGuesser } = leaderboard;
   const byPrice = [...rows]
     .filter((r) => r.priceAccuracy !== null)
@@ -209,23 +228,25 @@ function TasterLeaderboardCard({ leaderboard }: { leaderboard: TasterLeaderboard
 
   return (
     <Card className="p-5">
-      <p className="mb-3 text-sm font-semibold text-negro">Ranking de catadores</p>
+      <p className="mb-3 text-sm font-semibold text-negro">{t("results.tasterLeaderboardTitle")}</p>
 
       {(bestPriceGuesser || bestGrapeGuesser) && (
         <div className="mb-4 grid gap-3 sm:grid-cols-2">
           {bestPriceGuesser && (
             <div className="rounded-xl bg-dorado/10 p-3 text-center">
-              <p className="text-xs text-muted">💰 Se acercó más al valor real</p>
+              <p className="text-xs text-muted">{t("results.bestPriceGuesser")}</p>
               <p className="mt-1 text-lg font-bold text-burdeo">{bestPriceGuesser.name}</p>
-              <p className="text-xs text-muted">{bestPriceGuesser.priceAccuracy}% de precisión</p>
+              <p className="text-xs text-muted">
+                {t("results.accuracyPct", { pct: bestPriceGuesser.priceAccuracy ?? 0 })}
+              </p>
             </div>
           )}
           {bestGrapeGuesser && (
             <div className="rounded-xl bg-burdeo/10 p-3 text-center">
-              <p className="text-xs text-muted">🍇 Mejor nariz para las cepas</p>
+              <p className="text-xs text-muted">{t("results.bestGrapeGuesser")}</p>
               <p className="mt-1 text-lg font-bold text-burdeo">{bestGrapeGuesser.name}</p>
               <p className="text-xs text-muted">
-                {bestGrapeGuesser.grapeHits}/{bestGrapeGuesser.grapeGuesses} aciertos
+                {t("results.hitsOf", { hits: bestGrapeGuesser.grapeHits, total: bestGrapeGuesser.grapeGuesses })}
               </p>
             </div>
           )}
@@ -235,7 +256,7 @@ function TasterLeaderboardCard({ leaderboard }: { leaderboard: TasterLeaderboard
       {byPrice.length > 0 && (
         <div className="mb-3">
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-            Precisión de precio
+            {t("results.priceAccuracySection")}
           </p>
           <div className="space-y-1">
             {byPrice.map((r, i) => (
@@ -253,7 +274,7 @@ function TasterLeaderboardCard({ leaderboard }: { leaderboard: TasterLeaderboard
       {byGrape.length > 0 && (
         <div>
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-            Aciertos de cepa
+            {t("results.grapeHitsSection")}
           </p>
           <div className="space-y-1">
             {byGrape.map((r, i) => (

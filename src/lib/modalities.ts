@@ -48,8 +48,29 @@ export function getModality(key: string): Modality {
   return MODALITIES.find((m) => m.key === key) ?? MODALITIES[0];
 }
 
-/** Cepas tintas más frecuentes en Chile (para elegir en catas de tinto). */
-export const CHILEAN_RED_GRAPES = [
+import type { Locale } from "./i18n/locales";
+import { MODALITY_I18N, AROMA_I18N, OTHER_BLEND_I18N } from "./i18n/vocab";
+
+/** Etiqueta de la modalidad traducida al idioma indicado. */
+export function getModalityLabel(key: string, locale: Locale): string {
+  const m = getModality(key);
+  return MODALITY_I18N[m.key]?.[locale]?.label ?? m.label;
+}
+
+/** Etiqueta del campo "estimación" (cepa, destilería, origen…) traducida. */
+export function getModalityGuessLabel(key: string, locale: Locale): string {
+  const m = getModality(key);
+  return MODALITY_I18N[m.key]?.[locale]?.guessLabel ?? m.guessLabel;
+}
+
+/** Descriptores de aroma de la modalidad, traducidos. */
+export function getModalityAromas(key: string, locale: Locale): string[] {
+  const m = getModality(key);
+  return m.aromas.map((a) => AROMA_I18N[a]?.[locale] ?? a);
+}
+
+/** Cepas tintas más frecuentes en Chile (para elegir en catas de tinto). Nombres propios: no se traducen. */
+const CHILEAN_RED_GRAPES_BASE = [
   "Cabernet Sauvignon",
   "Merlot",
   "Carménère",
@@ -66,14 +87,16 @@ export const CHILEAN_RED_GRAPES = [
   "Garnacha (Grenache)",
   "Mourvèdre",
   "Cinsault",
-  "Otra / Mezcla",
 ];
 
+/** Lista completa en español (compatibilidad con llamadas sin locale). */
+export const CHILEAN_RED_GRAPES = [...CHILEAN_RED_GRAPES_BASE, OTHER_BLEND_I18N.es];
+
 /**
- * Opciones sugeridas para el campo de estimación de cepa/origen.
- * Devuelve una lista para elegir, o null si es texto libre.
+ * Opciones sugeridas para el campo de estimación de cepa/origen, en el idioma
+ * indicado. Devuelve una lista para elegir, o null si es texto libre.
  */
-export function guessOptions(modalityKey: string): string[] | null {
-  if (modalityKey === "tinto") return CHILEAN_RED_GRAPES;
+export function guessOptions(modalityKey: string, locale: Locale = "es"): string[] | null {
+  if (modalityKey === "tinto") return [...CHILEAN_RED_GRAPES_BASE, OTHER_BLEND_I18N[locale]];
   return null;
 }

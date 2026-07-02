@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import * as store from "@/lib/store";
 import { getHostToken } from "@/lib/session";
 import { Button, Card } from "@/components/ui";
+import { getInitialLocale } from "@/lib/i18n/server";
+import { DICTIONARIES } from "@/lib/i18n/dictionary";
 import { HostDashboard } from "./HostDashboard";
 
 export default async function HostPage({
@@ -17,15 +19,15 @@ export default async function HostPage({
 
   const token = await getHostToken(code);
   if (token !== event.hostToken) {
+    const locale = await getInitialLocale();
+    const t = (k: string) => DICTIONARIES[locale][k];
     return (
       <main className="bg-wine flex min-h-dvh flex-col items-center justify-center px-5">
         <Card className="max-w-sm p-8 text-center">
-          <h1 className="text-lg font-bold text-negro">Panel del anfitrión</h1>
-          <p className="mt-2 text-sm text-muted">
-            No tienes permiso para administrar este evento desde este dispositivo.
-          </p>
+          <h1 className="text-lg font-bold text-negro">{t("host.unauthorizedTitle")}</h1>
+          <p className="mt-2 text-sm text-muted">{t("host.unauthorizedDesc")}</p>
           <Link href="/" className="mt-4 inline-block">
-            <Button variant="outline">Ir al inicio</Button>
+            <Button variant="outline">{t("common.goHome")}</Button>
           </Link>
         </Card>
       </main>
