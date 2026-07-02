@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import * as store from "@/lib/store";
@@ -6,6 +5,7 @@ import { getHostToken } from "@/lib/session";
 import { Button, Card } from "@/components/ui";
 import { getInitialLocale } from "@/lib/i18n/server";
 import { DICTIONARIES } from "@/lib/i18n/dictionary";
+import { getSiteOrigin } from "@/lib/site";
 import { HostDashboard } from "./HostDashboard";
 
 export default async function HostPage({
@@ -34,10 +34,8 @@ export default async function HostPage({
     );
   }
 
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const joinUrl = `${proto}://${host}/join/${event.code}`;
+  const origin = await getSiteOrigin();
+  const joinUrl = `${origin}/join/${event.code}`;
 
   return <HostDashboard code={event.code} joinUrl={joinUrl} />;
 }

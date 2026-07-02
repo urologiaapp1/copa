@@ -1,6 +1,6 @@
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import * as store from "@/lib/store";
+import { getSiteOrigin } from "@/lib/site";
 import { TVView } from "./TVView";
 
 export const metadata = { title: "Pantalla TV · Copa Ciega" };
@@ -14,10 +14,8 @@ export default async function TVPage({
   const event = await store.getEventByCode(code);
   if (!event) notFound();
 
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const joinUrl = `${proto}://${host}/join/${event.code}`;
+  const origin = await getSiteOrigin();
+  const joinUrl = `${origin}/join/${event.code}`;
 
   return <TVView code={event.code} joinUrl={joinUrl} />;
 }
