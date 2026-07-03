@@ -110,19 +110,27 @@ export function PlayExperience({
         {/* TASTING — ritmo libre: lista de todos los vinos */}
         {event.status === "tasting" && event.freePace && (
           openItem ? (
-            <div>
-              <button
-                onClick={() => setOpenItem(null)}
-                className="mb-3 text-sm text-marfil/70 hover:text-marfil"
-              >
-                {t("play.backToList")}
-              </button>
+            <div className="space-y-4">
+              <BackToListButton
+                label={t("play.backToList")}
+                onClick={() => {
+                  setOpenItem(null);
+                  window.scrollTo({ top: 0 });
+                }}
+              />
               <EvaluationForm
                 code={code}
                 itemId={openItem}
                 position={data.items.find((i) => i.id === openItem)?.position ?? 0}
                 modalityKey={modality}
                 initial={data.myEvalsById[openItem] ?? null}
+              />
+              <BackToListButton
+                label={t("play.backToList")}
+                onClick={() => {
+                  setOpenItem(null);
+                  window.scrollTo({ top: 0 });
+                }}
               />
             </div>
           ) : (
@@ -135,7 +143,10 @@ export function PlayExperience({
                   return (
                     <button
                       key={it.id}
-                      onClick={() => setOpenItem(it.id)}
+                      onClick={() => {
+                        setOpenItem(it.id);
+                        window.scrollTo({ top: 0 });
+                      }}
                       className="flex w-full items-center justify-between rounded-[var(--radius)] border border-[var(--border)] bg-card px-4 py-3 text-left transition-colors hover:border-dorado"
                     >
                       <span className="font-semibold text-negro">
@@ -201,6 +212,19 @@ export function PlayExperience({
         )}
       </div>
     </main>
+  );
+}
+
+/** Botón formal para volver a la lista de vinos (estilo ticket, ancho completo). */
+function BackToListButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center justify-center gap-2 rounded-[var(--radius)] border-[1.5px] border-dashed border-dorado/50 bg-white/5 px-4 py-3 text-[13px] font-bold uppercase tracking-widest text-marfil transition-all hover:border-dorado hover:bg-white/10 active:scale-[0.99]"
+    >
+      {label}
+    </button>
   );
 }
 

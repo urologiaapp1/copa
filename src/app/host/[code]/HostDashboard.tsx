@@ -7,7 +7,13 @@ import { Confetti } from "@/components/Confetti";
 import { Button, Card, Badge } from "@/components/ui";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLive } from "@/lib/useLive";
-import { hostRemoveParticipant, hostSetIndex, hostSetStatus, hostUpdateItem } from "@/lib/actions";
+import {
+  hostAddItem,
+  hostRemoveParticipant,
+  hostSetIndex,
+  hostSetStatus,
+  hostUpdateItem,
+} from "@/lib/actions";
 import { getModality, getModalityLabel, CHILEAN_RED_GRAPES } from "@/lib/modalities";
 import { formatCLP } from "@/lib/utils";
 import { LiveStatsPanel } from "@/components/LiveStats";
@@ -173,9 +179,16 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
 
             <LiveStatsPanel code={code} />
 
-            {event.doubleBlind && (
-              <ItemEditor code={code} items={data.items} modalityKey={event.modality} t={t} />
-            )}
+            <ItemEditor code={code} items={data.items} modalityKey={event.modality} t={t} />
+
+            <Button
+              variant="outline"
+              className="w-full border-dorado/50 text-marfil hover:bg-white/10"
+              disabled={busy}
+              onClick={() => run(async () => { await hostAddItem(code); })}
+            >
+              {t("host.addWine")}
+            </Button>
 
             <Card className="p-5">
               <p className="mb-3 text-sm font-semibold text-negro">{t("host.responsesPerWine")}</p>
@@ -254,9 +267,7 @@ export function HostDashboard({ code, joinUrl }: { code: string; joinUrl: string
               </Button>
             </Card>
 
-            {event.doubleBlind && (
-              <ItemEditor code={code} items={data.items} modalityKey={event.modality} t={t} />
-            )}
+            <ItemEditor code={code} items={data.items} modalityKey={event.modality} t={t} />
           </div>
         )}
 

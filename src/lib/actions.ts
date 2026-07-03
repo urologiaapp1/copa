@@ -232,6 +232,29 @@ export async function hostUpdateItem(code: string, itemId: string, info: ItemInf
   return { ok: true };
 }
 
+// ---------- Anfitrión: agregar un vino en plena cata ----------
+export async function hostAddItem(code: string) {
+  const event = await requireHost(code);
+  if (event.status === "closed" || event.status === "revealed")
+    return { ok: false, error: "La votación ya cerró" };
+  const items = await store.getItemsForEvent(event.id);
+  if (items.length >= 50) return { ok: false, error: "Máximo 50 vinos" };
+  const position = items.length ? Math.max(...items.map((i) => i.position)) + 1 : 1;
+  await store.insertItem({
+    id: generateToken(),
+    eventId: event.id,
+    position,
+    name: `Vino ${position}`,
+    producer: null,
+    grape: null,
+    region: null,
+    price: null,
+    imageUrl: null,
+  });
+  revalidatePath(`/host/${code}`);
+  return { ok: true, position };
+}
+
 // ---------- Anfitrión: eliminar un catador ----------
 export async function hostRemoveParticipant(code: string, participantId: string) {
   const event = await requireHost(code);
